@@ -120,6 +120,17 @@ return '<w:tbl><w:tblPr><w:tblW w:w="9300" w:type="dxa"/>'+bd+'</w:tblPr>'
 // --------------------------------------------------------------------- рисунки
 const рисунки=[];
 const ШИРИНА=5486400;   // 15,24 см — по ширине абзацного поля A4
+const ОГР_ВЫС=4500000;  // 12,5 см — иначе высокий график уходит на следующую страницу
+const ЕД_В_СМ=360000;   // EMU в сантиметре
+// Пропорции берём из самого PNG (заголовок IHDR, байты 16..23). Раньше ширина и
+// высота задавались одинаковыми, и любой график растягивался в квадрат.
+function размерПоПропорциям(файл){
+ const d=fs.readFileSync(файл);
+ const px_ш=d.readUInt32BE(16), px_в=d.readUInt32BE(20);
+ let cx=ШИРИНА, cy=Math.round(ШИРИНА*px_в/px_ш);
+ if(cy>ОГР_ВЫС){cy=ОГР_ВЫС;cx=Math.round(ОГР_ВЫС*px_ш/px_в);}
+ return {cx:cx,cy:cy};
+}
 let relId=10;           // rId1 и rId2 заняты стилем и настройками
 function добавитьРисунок(файл,подпись){
  if(!fs.existsSync(файл)){console.log('  ! нет файла графика: '+файл);return '';}
@@ -128,13 +139,14 @@ function добавитьРисунок(файл,подпись){
  const rid='rId'+id;
  рисунки.push({имя:имя,данные:fs.readFileSync(файл),rid:rid});
  const n=рисунки.length;
+ const размер=размерПоПропорциям(файл);
  let xml=P('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
-  +'<wp:extent cx="'+ШИРИНА+'" cy="'+ШИРИНА+'"/>'
+  +'<wp:extent cx="'+размер.cx+'" cy="'+размер.cy+'"/>'
   +'<wp:docPr id="'+n+'" name="Рисунок '+n+'"/>'
   +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
   +'<pic:pic><pic:nvPicPr><pic:cNvPr id="'+n+'" name="'+имя+'"/><pic:cNvPicPr/></pic:nvPicPr>'
   +'<pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-  +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+ШИРИНА+'" cy="'+ШИРИНА+'"/></a:xfrm>'
+  +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+размер.cx+'" cy="'+размер.cy+'"/></a:xfrm>'
 +'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
   +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',ЦЕНТР);
  xml+=P(runsXml('Рисунок '+n+' — '+подпись),ЦЕНТР);
@@ -157,6 +169,13 @@ function разобрать(md){
   if(/^#{1,6}\s+/.test(l)){
    const m=l.match(/^(#{1,6})\s+(.*)$/);
    блоки.push({тип:'h',уровень:m[1].length,текст:m[2]});i++;continue;
+  }
+  // Явная вставка иллюстрации: ![имя_файла](подпись). Нужна, чтобы держать
+  // рисунок рядом с текстом, который его описывает, и не зависеть от названий
+  // разделов (в отличие от привязки ПОСЛЕ_ЗАГЛОВКА).
+  if(/^!\[[^\]]+\]\(.*\)\s*$/.test(l)){
+   const im=l.match(/^!\[([^\]]+)\]\((.*)\)\s*$/);
+   блоки.push({тип:'img',файл:im[1],подпись:im[2]});i++;continue;
   }
   if(/^\s*\|.*\|\s*$/.test(l)){
    const ст=[];
@@ -258,6 +277,7 @@ const CONTENT_TYPES='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
  +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
  +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
  +'<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+ +'<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
  +'</Types>';
 
 const ROOT_RELS='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -281,12 +301,24 @@ const SETTINGS='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
  +'<w:settings '+NS+'><w:compat/></w:settings>';
 
 // A4; поля: левое 30 мм, правое 15 мм, верхнее 20 мм, нижнее 20 мм
-const SECTPR='<w:sectPr>'
+const SECTPR='<w:sectPr><w:footerReference w:type="default" r:id="rId3"/>'
  +'<w:pgSz w:w="11906" w:h="16838"/>'
  +'<w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" '
  +'w:header="708" w:footer="708" w:gutter="0"/>'
  +'<w:cols w:space="708"/><w:docGrid w:linePitch="360"/>'
  +'</w:sectPr>';
+
+// Колонтитул: номер страницы по центру (поле PAGE — Word пересчитывает сам).
+const NS_W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const КОЛОНТИТУЛ='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+ +'<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/>'
+ +'<w:rPr><w:sz w:val="24"/></w:rPr></w:pPr>'
+ +'<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+ +'<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'
+ +'<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+ +'<w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>2</w:t></w:r>'
+ +'<w:r><w:fldChar w:fldCharType="end"/></w:r>'
+ +'</w:p></w:ftr>';
 
 function записать(){
  const doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -295,7 +327,8 @@ function записать(){
  let rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
   +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-  +'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>';
+  +'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
+ +'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>';
  рисунки.forEach(function(p){
   rels+='<Relationship Id="'+p.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+p.имя+'"/>';
  });
@@ -307,7 +340,8 @@ function записать(){
   {имя:'word/document.xml',данные:doc},
   {имя:'word/_rels/document.xml.rels',данные:rels},
   {имя:'word/styles.xml',данные:STYLES},
-  {имя:'word/settings.xml',данные:SETTINGS}
+  {имя:'word/settings.xml',данные:SETTINGS},
+   {имя:'word/footer1.xml',данные:КОЛОНТИТУЛ}
  ];
  рисунки.forEach(function(p){файлы.push({имя:'word/media/'+p.имя,данные:p.данные});});
 
@@ -319,10 +353,25 @@ function записать(){
 }
 
 function собрать(){
- const f=fs.readdirSync(DIR).filter(function(x){return x.endsWith('.md');})
-  .filter(function(x){return x!=='DEVLOG.md';})[0];
+ const f=fs.readdirSync(DIR).filter(function(x){return x.endsWith('.md');})  .filter(function(x){return /^Отчет_вариант_7\.md$/.test(x);})[0];
  if(!f)throw new Error('не найден .md с запиской');
- const блоки=разобрать(fs.readFileSync(path.join(DIR,f),'utf8'));
+ // Содержимое между маркерами $$ … $$ (в т.ч. многострочных $$…$$) — это формула.
+// В Word она выводится отдельным абзацем по центру, без отступа первой строки.
+// Смысл: в документ попадает читаемая формула, а не исходник в LaTeX.
+const text=fs.readFileSync(path.join(DIR,f),'utf8').split(/\r?\n/);
+const блоки=[];let i=0;
+while(i<text.length){
+ const строка=text[i];
+ if(строка.trim()==='$$'){
+  const буфер=[];i++;
+  while(i<text.length&&text[i].trim()!=='$$'){буфер.push(text[i]);i++;}
+  i++;                       // закрывающий $$
+  блоки.push({тип:'formula',текст:буфер.join('\n').trim()});
+  continue;
+ }
+ i++;
+ блоки.push.apply(блоки,разобрать(строка+'\n'));
+}
  // Шапка исходного .md («ПОЯСНИТЕЛЬНАЯ ЗАПИСКА», дисциплина, вариант) уже
  // перенесена на титульный лист — её в теле документа повторять не нужно.
  const начало=блоки.findIndex(function(b){return b.тип==='h'&&/^СОДЕРЖАНИЕ/i.test(b.текст.trim());});
@@ -350,13 +399,25 @@ function собрать(){
     out.push(P(runsXml(t),
      '<w:pPr><w:jc w:val="left"/><w:spacing w:before="180" w:after="120"/></w:pPr>'));
    }
-   const сп=ПОСЛЕ_ЗАГЛОВКА[t];
-   if(сп)сп.forEach(function(p){
-     out.push(добавитьРисунок(path.join(ГРАФ,p[0]+'.png'),p[1]));
-   });
+   // Рисунки вставляются по явным маркерам ![файл](подпись) в тексте записки,
+   // поэтому привязка к названиям заголовков здесь отключена.
+   return;
    return;
   }
   if(вОглавлении)return;
+  if(b.тип==='img'){
+   out.push(добавитьРисунок(path.join(ГРАФ,b.файл+'.png'),b.подпись));
+   return;
+  }
+  if(b.тип==='formula'){
+   // Формула: по центру, без отступа первой строки, полужирный не используется.
+   b.текст.split('\n').forEach(function(строкаФормулы){
+    out.push(P(esc(строкаФормулы),
+     '<w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/>'
+     +'<w:ind w:firstLine="0"/></w:pPr>'));
+   });
+   return;
+  }
   if(b.тип==='tbl'){
    out.push(таблица(b.строки));
    out.push(абзац('',НЕТ_ОТСТУПА));return;
