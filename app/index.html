@@ -270,8 +270,14 @@ function читатьВвод(){P.E=+document.getElementById("inE").value||1;P.t
  P.Td=+document.getElementById("inTd").value||0;P.N=+document.getElementById("inN").value||12;
  P.тип=document.getElementById("inТип").value;}
 function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.Tc;
- // S(ω) численно; ωв по 0.1·max (п.2.1.1 из методички)
- var S0=cAbs(Sчисл(0,Tc)),wв=0;for(var w=0;w<=50/Tc;w+=0.05/Tc){if(cAbs(Sчисл(w,Tc))>=0.1*S0)wв=w;}
+ // S(ω) численно; ωв по 0,1·max (п.2.1.1 методички).
+ // ВАЖНО: берём ПЕРВОЕ пересечение уровня вниз. У знакопеременного спектра
+ // уровень 0,1·max пересекается дважды; второе пересечение относится уже
+ // к следующему лепестку и за верхнюю границу не принимается.
+ var S0=cAbs(Sчисл(0,Tc)),wв=0,шаг=0.0005/Tc;
+ for(var w=шаг;w<=50/Tc;w+=шаг){
+  if(cAbs(Sчисл(w,Tc))<0.1*S0){wв=w-шаг;break;}
+ }
  var Tд=P.Td>0?P.Td*1e-6:Math.PI/wв; if(P.Td>0)Tд=P.Td*1e-6;
  var wд=2*Math.PI/Tд;
  // x(n): поле "Свои x(n)" важнее (частичный режим)
@@ -732,7 +738,20 @@ function загрузитьJSON(inp){var f=inp.files[0],r=new FileReader();r.onl
 function применитьВариант0(){try{var n=+document.getElementById("vNom").value||7,g=+document.getElementById("vGrp").value||1;
  var s1=String(TAB_A1[n][0]),s2=String(TAB_A1[n][1]);P.N1=+s1[0];P.N2=+s1[1];P.N3N4=TAB_A1[n][1];P.тип=букваПоГруппе(n,g);
  document.getElementById("шифрВывод").textContent="Шифр: N1N2="+s1+" N3N4="+s2+" буква="+P.тип+(n===7?" (сигнал 71: трапеция t2=2t1,Tc=3t1; цепь 12: L1+R1+(L2‖R2))":"");}catch(e){}}
-function Sчисл(w,Tc){var M=600,s=C(0,0),h=Tc/M;for(var i=0;i<=M;i++){var t=i*h;s=cA(s,cM(C(s_аналог(t),0),cE(C(0,-w*t))));}return cM(s,C(h,0));}
+// S(ω) численно методом Симпсона. ВАЖНО: сетка разбивается ТОЧНО в точках
+// излома t1 и t2 — при равномерной сетке на всём [0,Tc] теряется точность
+// на скачке сигнала в t2 и S(0) выходит 1,4975e-6 вместо правильных 1,5e-6.
+function Sчисл(w,Tc){var M=600,q=парамСиг(),точки=[0,P.t1,q.t2,Tc],re=0,im=0;
+ for(var k=0;k<точки.length-1;k++){
+  var a=точки[k],b=точки[k+1],h=(b-a)/M,pr=0,pi=0;
+  for(var i=0;i<=M;i++){
+   var t=a+i*h,v=s_аналог(t);
+   var wt=(i===0||i===M)?1:(i%2?4:2);          // Симпсон
+   pr+=wt*v*Math.cos(w*t); pi-=wt*v*Math.sin(w*t);
+  }
+  re+=pr*h/3; im+=pi*h/3;
+ }
+ return Math.hypot(re,im);}
 применитьВариант0();
 применитьТему();
 </script>

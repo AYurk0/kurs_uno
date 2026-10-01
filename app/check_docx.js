@@ -23,6 +23,9 @@ const latex=(doc.match(/\\(frac|text|begin|cdot|le |ge |boxed)/g)||[]);
 console.log('символов в document.xml:',doc.length);
 console.log('остатки LaTeX-команд:',latex.length,latex.slice(0,5));
 console.log('дollar-символов $:',(doc.match(/\$/g)||[]).length);
+// где именно остались символы $ — выводим окружающий текст
+const all=doc.match(/<w:t[^>]*>([^<]*)<\/w:t>/g).map(function(x){return x.replace(/<[^>]+>/g,'');});
+all.forEach(function(x,i){ if(x.indexOf('$')>=0) console.log('  $ в ['+i+']: '+x.slice(0,120)); });
 
 // примеры формул: абзацы по центру с math-содержимым
 const абз=doc.split('</w:p>');
