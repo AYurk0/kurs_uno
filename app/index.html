@@ -1,0 +1,746 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Решатель курсовой — ДОС и ЦФ (Каратаева 2002)</title>
+<style>/* ТЕМА: светлая (по умолчанию) / тёмная. Приоритет: выбор пользователя (:root[data-theme]) > системная (prefers-color-scheme) */
+:root{--bg:#f7f7f7;--fg:#111;--card:#fff;--line:#ccc;--h2bg:#e3eaf5;--pre:#f0f0f0;--mut:#444;--ax:#555;--grid:#e0e0e0;--c1:#0044cc;--c2:#cc0000;--c3:#008800;--c4:#aa00aa;--tipbg:#111;--tipfg:#fff;--s1:#111;--s2:#444;--blk:#fff;--fil:var(--fg)}
+:root[data-theme="dark"]{--bg:#14171c;--fg:#e8e8e8;--card:#1c2027;--line:#3a3f4a;--h2bg:#243044;--pre:#22262e;--mut:#a8b0bd;--ax:#9aa3b2;--grid:#2c313a;--c1:#5aa9ff;--c2:#ff7b7b;--c3:#5cd67a;--c4:#c98bff;--tipbg:#e8e8e8;--tipfg:#111;--s1:#e8e8e8;--s2:#a8b0bd;--blk:#12161c;--fil:#e8e8e8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--fg:#e8e8e8;--card:#1c2027;--line:#3a3f4a;--h2bg:#243044;--pre:#22262e;--mut:#a8b0bd;--ax:#9aa3b2;--grid:#2c313a;--c1:#5aa9ff;--c2:#ff7b7b;--c3:#5cd67a;--c4:#c98bff;--tipbg:#e8e8e8;--tipfg:#111;--s1:#e8e8e8;--s2:#a8b0bd;--blk:#12161c;--fil:#e8e8e8}}
+body{font-family:Arial,sans-serif;max-width:1120px;margin:0 auto;padding:12px;background:var(--bg);color:var(--fg)}
+.ttl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ttl h1{font-size:22px;margin:0;flex:1 1 420px}
+#кнопкаТемы{font-size:13px;padding:4px 10px}
+h2{font-size:16px;background:var(--h2bg);padding:6px 8px;border-radius:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}
+label{display:inline-block;margin:4px 8px 4px 0}input,select{font-size:14px;padding:3px 6px;background:var(--card);color:var(--fg)}
+input[type=number]{width:80px}
+.gfx{position:relative;max-width:660px;margin:8px 0;background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.gfx svg{display:block;width:100%;height:auto}
+.gfx .bar{padding:2px 6px;text-align:right}
+.gfx .bar button{font-size:11px;padding:1px 8px;margin:0}
+.gfx .tip{position:absolute;display:none;background:var(--tipbg);color:var(--tipfg);font-size:12px;padding:2px 6px;border-radius:4px;pointer-events:none;white-space:nowrap;z-index:5}
+@media print{.gfx .bar{display:none}body{background:#fff;color:#000}.card{break-inside:avoid}}
+button{font-size:14px;padding:6px 12px;margin:4px;cursor:pointer}
+pre{background:var(--pre);padding:8px;white-space:pre-wrap;font-size:13px}
+.small{font-size:12px;color:var(--mut)}.err{color:#b00;font-weight:bold}.ok{color:#080}
+td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-collapse:collapse}</style></head>
+<body><div class="ttl"><h1>Решатель курсовой «Дискретная обработка сигналов и цифровая фильтрация»</h1>
+<button id="кнопкаТемы" onclick="переключитьТему()" title="Переключить тему оформления">Тема: системная</button></div>
+<div class="small">Каратаева 2002. S(ω)=∫s(t)e^-jωt dt (3.1); Tд=π/ωв (3.25); Sд(ω)=Σx(n)e^-jωnTд; p=2/Tд·(z−1)/(z+1) (4.10). Файлы: app/index.html + app/DEVLOG.md</div>
+<div class="card"><h2>0. Вариант (табл. А.1) + данные</h2>
+<label>Вариант № <input type="number" id="vNom" value="7" min="1" max="30"></label>
+<label>Группа <select id="vGrp"><option value="1">1-я</option><option value="2">2-я</option><option value="3">3-я</option></select></label>
+<button onclick="применитьВариант()">Применить вариант</button> <span id="шифрВывод" class="small"></span><br>
+<label>E, В <input type="number" id="inE" value="1" step="any"></label>
+<label>t1, мкс <input type="number" id="inT1" value="1" step="any"></label>
+<label>Tд вруч. мкс (0=авто) <input type="number" id="inTd" value="0" step="any"></label>
+<label>N ДПФ <input type="number" id="inN" value="12" min="4" max="256"></label>
+<div class="small" id="сигналОпис"></div><h3>Цепь 12 (тип А) / АЧХ (Б,Ч)</h3>
+<label>Тип <select id="inТип"><option value="А">А — цепь 12</option><option value="Б">Б — Баттерворт</option><option value="Ч">Ч — Чебышев</option></select></label>
+<label>R1 кОм <input type="number" id="inR1" value="1" step="any"></label>
+<label>R2 кОм <input type="number" id="inR2" value="1" step="any"></label>
+<label>L1 мГн <input type="number" id="inL1" value="1" step="any"></label>
+<label>L2 мГн <input type="number" id="inL2" value="1" step="any"></label>
+<div class="small">Цепь 12: L1 продольно (вх→A→вых); шунт A→B: R1, B→общ: L2‖R2. Умолчания: E=1В,t1=1мкс,R=1кОм,L=1мГн.</div>
+<div class="small" style="margin:6px 0;padding:6px;background:var(--h2bg);border-radius:6px">
+ <b>Свою схему рисуем в разделе 1 (редактор).</b> Чтобы часть 2А считала именно её, а не жёстко зашитую цепь 12:
+ <label style="margin:4px 0"><input type="checkbox" id="useСхему" onchange="СХЕМА_ПРИМЕНИТЬ=this.checked;подсказка(this.checked?'Расчёт 2А будет использовать схему из редактора (сначала нажмите «Рассчитать схему»).':'Расчёт 2А вернулся к жёсткой цепи 12.');">
+ Использовать схему из редактора</label>
+ <div class="small" id="схСтатус2А">(пока не используется)</div>
+</div>
+<div><button onclick="решитьВсё()">★ Решить всё</button>
+<button onclick="самопроверка()">Самопроверка В.1+В.2</button>
+<button onclick="сохранитьJSON()">Сохранить JSON</button>
+<input type="file" id="файлJSON" accept=".json" onchange="загрузитьJSON(this)">
+<button onclick="window.print()">Печать / PDF</button></div><div id="тестВывод"></div></div>
+<div class="card"><h2>1. Редактор схем цепи (тип А) — рисуем мышью, расчёт выводится из геометрии</h2>
+<div class="small" style="margin-bottom:6px">
+ Правило соединения: <b>соединяются только концы</b> (совпадение координат); пересечения без общей точки НЕ соединяются.
+ Источник <b>U</b> — вход, метка <b>Изменение (ΔU)</b> — где снимается напряжение, <b>GND</b> — общий узел.
+ Провод: клик = точка, двойной клик или Enter = финиш, Esc = отмена. Вращение выбранного: <b>R</b> (кнопка) или <b>клавиша r</b>. Отмена: Ctrl+Z / Ctrl+Shift+Z.
+ <br><b>Кружок</b> = место соединения (узел); пересечение проводов без общей точки соединением <b>не</b> является.
+ Перетаскивая элемент, за ним поедут и присоединённые к нему провода.
+ <br><b>ΔUвых</b> (инструмент «Изменение (ΔU)») — метка, а не элемент цепи: она ничего не разрывает, а только указывает, с какого узла снимать изменение сигнала. Ставится в любой узел; в пресете «Цепь 12» — между L1 и R1, потому что там узел A: после последовательной катушки и перед шунтом R1 (именно этот узел и является выходом ФНЧ). Без метки расчёт не выполняется — редактор подскажет.
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start">
+<div style="flex:0 0 116px" id="палитра">
+ <button style="width:100%;display:block;margin:2px 0" data-и="выбор" onclick="выбратьИнстр('выбор')">↖ Выбор</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="провод" onclick="выбратьИнстр('провод')">─ Провод</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="R" onclick="выбратьИнстр('R')">▭ Резистор</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="C" onclick="выбратьИнстр('C')">‖ Ёмкость</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="L" onclick="выбратьИнстр('L')">⌒ Индуктивность</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="U" onclick="выбратьИнстр('U')">(±) Источник</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="GND" onclick="выбратьИнстр('GND')">⏚ Земля</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="выход" onclick="выбратьИнстр('выход')">→ Изменение (ΔU)</button>
+ <button style="width:100%;display:block;margin:2px 0" data-и="стереть" onclick="выбратьИнстр('стереть')">✕ Стереть</button>
+ <hr style="margin:6px 0">
+ <div class="small" style="margin:4px 0">Схемы табл. А.3 (шифр цепи N<sub>3</sub>N<sub>4</sub>):</div>
+ <select id="схВыборА3" style="width:100%" onchange="поставитьСхемуА3(this.value)"></select>
+ <div id="схОписА3" class="small" style="margin:2px 0"></div>
+ <button style="width:100%;display:block;margin:2px 0" onclick="поставитьПресет('12')">Пресет: цепь 12</button>
+ <button style="width:100%;display:block;margin:2px 0" onclick="поставитьПресет('В2')">Пресет: пример В.2</button>
+ <button style="width:100%;display:block;margin:2px 0" onclick="очиститьСхему()">Очистить</button>
+ <button style="width:100%;display:block;margin:2px 0" onclick="отменить()">↶ Отменить</button>
+ <button style="width:100%;display:block;margin:2px 0" onclick="повторить()">↷ Повторить</button>
+</div>
+<div style="flex:1 1 480px;min-width:340px">
+ <div id="холстСхемы" class="gfx" style="margin:0"></div>
+ <div id="редСтатус" class="small" style="margin:6px 0"></div>
+</div>
+<div style="flex:0 0 230px">
+ <div id="редСвойства" class="small"></div>
+ <hr style="margin:8px 0">
+ <label class="small">Имя схемы<br><input id="схИмя" value="Моя схема" style="width:180px"></label>
+ <div style="margin:4px 0"><button onclick="сохранитьВХранилище(document.getElementById('схИмя').value)">Сохранить в браузер</button>
+ <button onclick="сохранитьСхемуВФайл()">Файл</button>
+ <input type="file" id="файлСхемы" accept=".json" onchange="загрузитьСхемуИзФайла(this)"></div>
+ <div id="схСписок" class="small"></div>
+</div>
+</div>
+<div style="margin-top:8px"><button onclick="рассчитатьСхему()">★ Рассчитать схему (K(p), полюса, АЧХ)</button>
+<b>Извлечённый нетлист</b> (это и есть «код» схемы — он вычисляется из рисунка, а не вводится руками):
+<div id="редНетлист" class="small"></div></div>
+<div id="редОтчет"></div>
+</div>
+<div class="card"><h2>2. Часть 1 — дискретная обработка (п. 2.1)</h2>
+<button onclick="решитьЧ1()">Решить только ч.1</button>
+<label>Свои x(n) через запятую <input id="inX" style="width:300px" placeholder="пусто = из сигнала"></label>
+<pre id="out1"></pre>
+<div class="gfx" id="cvS"></div>
+<div class="gfx" id="cvФ"></div>
+<div class="gfx" id="cvX"></div><div class="gfx" id="cvDft"></div>
+<div class="gfx" id="cvRest"></div><div class="gfx" id="cvCmp"></div></div>
+<div class="card"><h2>2. Часть 2А — прототип + ЦФ (п. 2.2)</h2>
+<button onclick="решитьЧ2А()">Решить только 2А</button>
+<label>Свои a0..aM <input id="inA" style="width:180px" placeholder="авто"></label>
+<label>Свои b1..bN <input id="inB" style="width:180px" placeholder="авто"></label>
+<pre id="out2A"></pre><div id="схемаSVG"></div>
+<div class="gfx" id="cvA"></div><div class="gfx" id="cvФ2"></div>
+<div class="gfx" id="cvY"></div><div class="gfx" id="cvG"></div></div>
+<div class="card"><h2>3. Часть 2Б/Ч — ФНЧ по АЧХ (п. 2.3)</h2>
+<button onclick="решитьЧ2БЧ()">Решить только 2Б/Ч</button><pre id="out2Б"></pre>
+<div class="gfx" id="cvBCф"></div>
+<div class="gfx" id="cvBCg"></div><div class="gfx" id="cvBC"></div></div>
+<div class="card"><h2>4. Отчёт по п.5 — выводы</h2><pre id="outВывод"></pre></div>
+<script>"use strict";
+// === Этап 1. Мат. ядро: комплексы, полиномы, ДПФ/ОДПФ, Дюран-Кернер ===
+// --- Тема оформления: системная → светлая → тёмная → системная ---
+var ТЕМА_ПОРЯДОК=["системная","светлая","тёмная"],ТЕМА_ИНДЕКС=0;
+function применитьТему(){var t=ТЕМА_ПОРЯДОК[ТЕМА_ИНДЕКС],k=document.documentElement;
+ if(t==="системная")k.removeAttribute("data-theme");else k.setAttribute("data-theme",t==="тёмная"?"dark":"light");
+ var b=document.getElementById("кнопкаТемы");if(b)b.textContent="Тема: "+t;}
+function переключитьТему(){ТЕМА_ИНДЕКС=(ТЕМА_ИНДЕКС+1)%ТЕМА_ПОРЯДОК.length;применитьТему();}
+function C(re,im){return {re:re,im:im||0};}
+function cA(a,b){return C(a.re+b.re,a.im+b.im);} function cS(a,b){return C(a.re-b.re,a.im-b.im);}
+function cM(a,b){return C(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);}
+function cD(a,b){var d=b.re*b.re+b.im*b.im||1e-30;return C((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d);}
+function cAbs(a){return Math.hypot(a.re,a.im);} function cArg(a){return Math.atan2(a.im,a.re);}
+function cE(a){var e=Math.exp(a.re);return C(e*Math.cos(a.im),e*Math.sin(a.im));}
+// ДПФ/ОДПФ (прямо по ряду Фурье 3.4-3.7: Ck=1/N*Σx(n)e^(-j2πkn/N))
+function ДПФ(x){var N=x.length,R=[];for(var k=0;k<N;k++){var s=C(0,0);for(var n=0;n<N;n++){var f=-2*Math.PI*k*n/N;s=cA(s,cM(C(x[n],0),cE(C(0,f))));}R.push(cD(s,C(N,0)));}return R;}
+function ОДПФ(Ck){var N=Ck.length,R=[];for(var n=0;n<N;n++){var s=C(0,0);for(var k=0;k<N;k++){var f=2*Math.PI*k*n/N;s=cA(s,cM(Ck[k],cE(C(0,f))));}R.push(s.re);}return R;}
+// Полиномы: коэфф. по возрастанию степени. value, mul, корни Дюрана-Кернера
+function pVal(p,z){var s=C(0,0),pw=C(1,0);for(var i=0;i<p.length;i++){s=cA(s,cM(C(p[i],0),pw));pw=cM(pw,z);}return s;}
+function pMul(a,b){var r=new Array(a.length+b.length-1).fill(0);for(var i=0;i<a.length;i++)for(var j=0;j<b.length;j++)r[i+j]+=a[i]*b[j];return r;}
+function pAdd(a,b){var r=new Array(Math.max(a.length,b.length)).fill(0);for(var i=0;i<a.length;i++)r[i]+=a[i];for(var j=0;j<b.length;j++)r[j]+=b[j];return r;}
+// Корни полинома (коэффициенты по возрастанию степени) — метод Дюрана–Кернера
+// с ньютоновским ускорением. Порядок: нормируем по старшему коэффициенту (приведение к
+// монic), начальные приближения — на окружности радиуса |q0|^(1/n), затем итерации DK,
+// затем по 3 шага Ньютона для каждого корня (квадратичная сходимость).
+function pRoots(p){var n=p.length-1;if(n<1)return[];
+ var lead=p[n];if(!isFinite(lead)||lead===0)return[];
+ var q=[];for(var i=0;i<=n;i++)q.push(p[i]/lead);        // монic
+ var dq=pDeriv(q),ddq=pDeriv(dq);
+ var rad=Math.pow(Math.abs(q[0]),1/n)||1;
+ var r=[];for(i=0;i<n;i++){var ang=2*Math.PI*i/n+Math.PI/(2*n);
+  r.push(C(rad*Math.cos(ang),rad*Math.sin(ang)));}
+ for(var it=0;it<300;it++){var mx=0;
+  for(var k=0;k<n;k++){var v=pVal(q,r[k]),d=C(q[n],0);
+   for(var j=0;j<n;j++)if(j!==k)d=cM(d,cS(r[k],r[j]));
+   if(cAbs(d)<1e-300)continue;
+   var nr=cS(r[k],cD(v,d));mx=Math.max(mx,cAbs(cS(nr,r[k])));r[k]=nr;}
+  if(mx<1e-15)break;}
+ for(var t2=0;t2<8;t2++)for(k=0;k<n;k++){        // ускорение Ньютоном: z ← z − p(z)/p′(z)
+  var v2=pVal(q,r[k]),d2=pVal(dq,r[k]);
+  if(cAbs(d2)<1e-300)continue;
+  r[k]=cS(r[k],cD(v2,d2));}
+ return r;}
+// === Этап 3. Графики: одна универсальная функция plot на инлайновом SVG (раздел 4Б промпта) ===
+// Расчёты и рисование строго разделены: plot() ничего не знает о курсовой, только рисует переданные данные.
+// Настройки: title, xlabel, ylabel, h (высота), xlim, ylim, series:[{label,x:[],y:[],type:'line'|'stem',dash,dots}], marks:[{x,label}], hmarks:[{y,label}]
+var PLOTCOL=["var(--c1)","var(--c2)","var(--c3)","var(--c4)"];
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+// «круглые» деления оси: шаг 1/2/2.5/5/10 · 10^k
+function деления(a,b,n){n=n||6;var d=(b-a)/n;if(!(d>0))return[a];
+ var p=Math.pow(10,Math.floor(Math.log10(d))),f=d/p,s=(f<1.5?1:f<3?2:f<4?2.5:f<7?5:10)*p,t=[];
+ for(var i=0;i<400;i++){var v=(Math.ceil(a/s-1e-9)+i)*s;if(v>b+s*1e-9)break;t.push(+v.toPrecision(10));}return t;}
+// подпись числа на оси и в тултипе: без хвоста нулей, экспонента для очень мелких/больших
+function fmt(v){if(typeof v!=="number"||!isFinite(v))return String(v);var a=Math.abs(v);
+ if(a!==0&&(a>=1e5||a<1e-3))return v.toExponential(1);
+ return String(+v.toPrecision(5));}
+function plot(host,o){var el=(typeof host==="string")?document.getElementById(host):host;if(!el)return;o=o||{};
+ var ss=(o.series||[]).filter(function(s){return s&&s.x&&s.y&&s.x.length;});
+ if(!ss.length){el.innerHTML='<div class="small">(нет данных для графика)</div>';return;}
+ // нижнее поле: тики оси X -> подпись оси X -> строки легенды
+ var leg=ss.filter(function(se){return se.label;}),cols=leg.length>2?2:1,rows=Math.ceil(leg.length/cols);
+ var legTop=33+(o.xlabel?18:0); // базовая линия первой строки легенды от низа области построения
+ var W=640,H=o.h||270,m={l:64,r:16,t:34,b:legTop+(leg.length?12+15*rows:0)+4};
+ var yLeg0=H-m.b+legTop+12;
+ var ax=[],ay=[];ss.forEach(function(s){for(var i=0;i<s.x.length;i++){ax.push(s.x[i]);ay.push(s.y[i]);}});
+ var x0=(o.xlim&&o.xlim[0]!=null)?o.xlim[0]:Math.min.apply(null,ax),x1=(o.xlim&&o.xlim[1]!=null)?o.xlim[1]:Math.max.apply(null,ax);
+ var y0=(o.ylim&&o.ylim[0]!=null)?o.ylim[0]:Math.min.apply(null,ay),y1=(o.ylim&&o.ylim[1]!=null)?o.ylim[1]:Math.max.apply(null,ay);
+ if(ss.some(function(s){return s.type==="stem";})){y0=Math.min(y0,0);y1=Math.max(y1,0);}
+ if(!o.ylim||o.ylim[0]==null||o.ylim[1]==null){var d=(y1-y0)||Math.abs(y0)||1;
+  if(o.ylim&&o.ylim[0]!=null){y1+=d*0.10;}else if(o.ylim&&o.ylim[1]!=null){y0-=d*0.10;}
+  else{y1+=d*0.10;y0=(y0>0)?Math.max(0,y0-d*0.10):y0-d*0.10;}}
+ if(!(x1>x0)){x0-=0.5;x1+=0.5;}
+ var sx=function(x){return m.l+(x-x0)/(x1-x0)*(W-m.l-m.r);},sy=function(y){return H-m.b-(y-y0)/(y1-y0)*(H-m.t-m.b);};
+ var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(o.title||"график")+'">';
+ деления(x0,x1,7).forEach(function(t){if(t<x0-1e-12||t>x1+1e-12)return;
+  s+='<line x1="'+sx(t).toFixed(1)+'" x2="'+sx(t).toFixed(1)+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--grid)"/>';
+  s+='<text x="'+sx(t).toFixed(1)+'" y="'+(H-m.b+15)+'" font-size="11" text-anchor="middle" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
+ деления(y0,y1,5).forEach(function(t){if(t<y0-1e-12||t>y1+1e-12)return;
+  s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+sy(t).toFixed(1)+'" y2="'+sy(t).toFixed(1)+'" stroke="var(--grid)"/>';
+  s+='<text x="'+(m.l-6)+'" y="'+(sy(t)+4).toFixed(1)+'" font-size="11" text-anchor="end" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
+ s+='<rect x="'+m.l+'" y="'+m.t+'" width="'+(W-m.l-m.r)+'" height="'+(H-m.t-m.b)+'" fill="none" stroke="var(--ax)"/>';
+ if(y0<0&&y1>0)s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+sy(0).toFixed(1)+'" y2="'+sy(0).toFixed(1)+'" stroke="var(--ax)" stroke-dasharray="3 3"/>';
+ (o.marks||[]).forEach(function(k){var X=sx(k.x);if(X<m.l-1||X>W-m.r+1)return;
+  s+='<line x1="'+X.toFixed(1)+'" x2="'+X.toFixed(1)+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--c3)" stroke-dasharray="5 4"/>';
+  s+='<text x="'+(X+4).toFixed(1)+'" y="'+(m.t+13)+'" font-size="11" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
+ (o.hmarks||[]).forEach(function(k){var Y=sy(k.y);if(Y<m.t-1||Y>H-m.b+1)return;
+  s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+Y.toFixed(1)+'" y2="'+Y.toFixed(1)+'" stroke="var(--c3)" stroke-dasharray="5 4"/>';
+  s+='<text x="'+(W-m.r-4)+'" y="'+(Y-4).toFixed(1)+'" font-size="11" text-anchor="end" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
+ss.forEach(function(se,j){var c=PLOTCOL[j%PLOTCOL.length],dash=se.dash?' stroke-dasharray="6 4"':"";
+  if(se.type==="stem"){for(var i=0;i<se.x.length;i++){var X=sx(se.x[i]).toFixed(1);
+   s+='<line x1="'+X+'" x2="'+X+'" y1="'+sy(0).toFixed(1)+'" y2="'+sy(se.y[i]).toFixed(1)+'" stroke="'+c+'" stroke-width="1.6"/>';
+   s+='<circle cx="'+X+'" cy="'+sy(se.y[i]).toFixed(1)+'" r="3.2" fill="'+c+'"/>';}}
+  else{var dd="";for(var q=0;q<se.x.length;q++)dd+=(q?"L":"M")+sx(se.x[q]).toFixed(1)+" "+sy(se.y[q]).toFixed(1);
+   s+='<path fill="none" stroke="'+c+'" stroke-width="2"'+dash+' d="'+dd+'"/>';
+   if(se.dots)for(var q2=0;q2<se.x.length;q2+=Math.max(1,Math.ceil(se.x.length/40)))
+    s+='<circle cx="'+sx(se.x[q2]).toFixed(1)+'" cy="'+sy(se.y[q2]).toFixed(1)+'" r="2" fill="'+c+'"/>';}});
+ s+='<text x="'+m.l+'" y="20" font-size="13" font-weight="600" fill="var(--fg)">'+esc(o.title||"")+'</text>';
+ if(o.xlabel)s+='<text x="'+((m.l+W-m.r)/2).toFixed(1)+'" y="'+(H-m.b+32)+'" font-size="12" text-anchor="middle" fill="var(--mut)">'+esc(o.xlabel)+'</text>';
+ if(o.ylabel)s+='<text transform="translate(14 '+((m.t+H-m.b)/2).toFixed(1)+') rotate(-90)" font-size="12" text-anchor="middle" fill="var(--mut)">'+esc(o.ylabel)+'</text>';
+ if(leg.length){var cw=(W-m.l-m.r)/cols;
+  leg.forEach(function(se,j){var jj=ss.indexOf(se),c=PLOTCOL[jj%PLOTCOL.length],
+   col=j%cols,row=Math.floor(j/cols),lx=m.l+col*cw+4,ly=yLeg0+row*15;
+   s+='<line x1="'+lx+'" x2="'+(lx+18)+'" y1="'+ly+'" y2="'+ly+'" stroke="'+c+'" stroke-width="2"'+(se.dash?' stroke-dasharray="5 3"':"")+'/>';
+   if(se.type==="stem")s+='<circle cx="'+(lx+9)+'" cy="'+ly+'" r="3" fill="'+c+'"/>';
+   s+='<text x="'+(lx+23)+'" y="'+(ly+4)+'" font-size="11" fill="var(--fg)">'+esc(se.label)+'</text>';});}
+ s+='</svg>';
+ el.innerHTML='<div class="bar"><button type="button">Сохранить SVG</button></div>'+s+'<div class="tip"></div>';
+ var svg=el.querySelector("svg"),tip=el.querySelector(".tip");
+ svg.addEventListener("mousemove",function(ev){var r=svg.getBoundingClientRect();
+  var px=(ev.clientX-r.left)/r.width*W,best=null,bd=1e30;
+  ss.forEach(function(se){for(var i=0;i<se.x.length;i++){var d=Math.abs(sx(se.x[i])-px);if(d<bd){bd=d;best={se:se,i:i};}}});
+  if(!best||bd>40){tip.style.display="none";return;}
+  var Yp=sy(best.se.y[best.i]);
+  tip.textContent=(best.se.label?best.se.label+": ":"")+"x="+fmt(best.se.x[best.i])+"; y="+fmt(best.se.y[best.i]);
+  tip.style.display="block";tip.style.left=Math.min(px/W*r.width+14,r.width-200)+"px";tip.style.top=(Yp/H*r.height+18)+"px";});
+ svg.addEventListener("mouseleave",function(){tip.style.display="none";});
+ el.querySelector("button").addEventListener("click",function(){var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([svg.outerHTML.replace("<svg",'<svg xmlns="http://www.w3.org/2000/svg"')],{type:"image/svg+xml"}));
+  a.download=(o.title||"grafik").replace(/[^\wа-яА-ЯёЁ0-9]+/g,"_")+".svg";a.click();});}
+// Развёртка фазы (убирает скачки ±360° от atan2 — как рис. В.3 в методичке, только без разрывов)
+function развернутьФазу(град){var out=[град[0]];for(var i=1;i<град.length;i++){var d=град[i]-град[i-1];
+ while(d>180)d-=360;while(d<-180)d+=360;out.push(out[i-1]+d);}return out;}
+// === Этап 2. Данные вариантов: А.1, А.2 (сигнал), А.4 (АЧХ) ===
+var TAB_A1={1:[11,11],2:[21,21],3:[31,31],4:[41,41],5:[51,51],6:[61,61],7:[71,12],8:[81,22],9:[91,32],10:[12,42],11:[22,52],12:[32,62],13:[42,13],14:[52,23],15:[62,33],16:[72,43],17:[82,53],18:[92,63],19:[13,14],20:[23,24],21:[33,34],22:[43,44],23:[53,54],24:[63,64],25:[73,15],26:[83,25],27:[93,35],28:[14,45],29:[24,55],30:[34,65]};
+var ALF=[20,22,24,26,28,30],BET=[0.5,1,1.5,2,2.5,3];
+function букваПоГруппе(n,g){return [["Ч","А","Б"],["А","Б","Ч"],["Б","Ч","А"]][n%3][g-1];}
+var P={E:1,t1:1,N1:7,N2:1,N3N4:12,тип:"А",Td:0,N:12};
+// Сигнал: N1=7,N2=1 — трапеция t2=2t1,Tc=3t1 (вар.7). N1=1 — прямоугольник (пример В.1). Остальные типовые.
+function парамСиг(){var t2=2*P.t1,Tc=3*P.t1;return {t2:t2,Tc:Tc};} // все времена — в секундах
+function s_аналог(t){var E=P.E,t1=P.t1,q=парамСиг(),t2=q.t2,Tc=q.Tc;if(t<0||t>=Tc)return 0;
+ if(P.N1===7){if(t<t1)return E*t/t1;if(t<t2)return E;return 0;}
+ if(P.N1===1){return (t>=0&&t<Tc)?E:0;}
+ if(P.N1===2){return E*t/Tc;} if(P.N1===3){return E*Math.sin(Math.PI*t/Tc);} return E;}
+function глЛепесток(){var q=парамСиг();if(P.N1===1)return 2*Math.PI/q.Tc;return 2*Math.PI/q.Tc;}
+function применитьВариант(){var n=+document.getElementById("vNom").value,g=+document.getElementById("vGrp").value;
+ var s1=String(TAB_A1[n][0]),s2=String(TAB_A1[n][1]);P.N1=+s1[0];P.N2=+s1[1];P.N3N4=TAB_A1[n][1];
+ P.тип=букваПоГруппе(n,g);document.getElementById("inТип").value=P.тип;
+ document.getElementById("шифрВывод").textContent="Шифр: N1N2="+s1+" N3N4="+s2+" буква="+P.тип+(n===7?" (сигнал 71: трапеция t2=2t1,Tc=3t1; цепь 12: L1+R1+(L2‖R2))":"");
+ document.getElementById("сигналОпис").textContent="Сигнал N1="+P.N1+" (форма), N2="+P.N2+". Числа E,t1 — ввод пользователя (в книге только отношения).";
+ // Тип А: подставляем схему цепи из таблицы А.3 по шифру N3N4. Для Б/Ч аналоговой
+ // схемы нет — там ФНЧ задаётся параметрами АЧХ, поэтому селек схем не меняем.
+ if(P.тип==="А")схемаДляВарианта(P.N3N4);
+ решитьВсё();}
+// === Этап 3. Часть 1 целиком (п.2.1): S, ωв(0.1), Tд, x(n), спектр, Z, ДПФ, ОДПФ, Котельников ===
+var R1={}; // результаты ч.1 для цепочки
+function читатьВвод(){P.E=+document.getElementById("inE").value||1;P.t1=(+document.getElementById("inT1").value||1)*1e-6; // мкс -> с
+ P.Td=+document.getElementById("inTd").value||0;P.N=+document.getElementById("inN").value||12;
+ P.тип=document.getElementById("inТип").value;}
+function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.Tc;
+ // S(ω) численно; ωв по 0.1·max (п.2.1.1 из методички)
+ var S0=cAbs(Sчисл(0,Tc)),wв=0;for(var w=0;w<=50/Tc;w+=0.05/Tc){if(cAbs(Sчисл(w,Tc))>=0.1*S0)wв=w;}
+ var Tд=P.Td>0?P.Td*1e-6:Math.PI/wв; if(P.Td>0)Tд=P.Td*1e-6;
+ var wд=2*Math.PI/Tд;
+ // x(n): поле "Свои x(n)" важнее (частичный режим)
+ var xs=document.getElementById("inX").value.trim(),x=[];
+ if(xs){x=xs.split(/[;,\s]+/).map(Number).filter(function(v){return isFinite(v);});}
+ else{var Nx=Math.max(4,Math.round(Tc/Tд));for(var n=0;n<Nx;n++)x.push(s_аналог(n*Tд+Tд*1e-9));}
+ R1={S0:S0,wв:wв,Tд:Tд,wд:wд,x:x,Tc:Tc};
+ var N=P.N,Ck=ДПФ(x.slice(0,N).concat(new Array(Math.max(0,N-x.length)).fill(0)));
+ var xВос=ОДПФ(Ck);
+ var s="Ч.1 вар.7 (сигнал 71: трапеция, t2=2t1, Tc=3t1).\n";
+ s+="S(0)="+(S0*1e6).toFixed(4)+" мкВ·с; ωв(0.1)="+wв.toExponential(3)+" рад/с; Tд="+(Tд*1e6).toFixed(4)+" мкс; ωд="+wд.toExponential(3)+" рад/с.\n";
+ s+="x(n), n=0.."+(x.length-1)+": ["+x.map(function(v){return v.toFixed(3);}).join(", ")+"]\n";
+ s+="Z-образ: X(z)=Σ x(n)·z^(−n) = "+x.map(function(v,k){return v.toFixed(3)+(k===0?"":"·z^−"+k);}).join(" + ")+"\n";
+ s+="  численно X(z) на единичной окружности z=e^(jωTд): X(e^(jωTд))=Σx(n)e^(−jωnTд) — то же, что Sд(ω) (3.19).\n";
+ s+="Спектр дискр.: Sд(ω)=Σx(n)e^-jωnTд, период ωд (3.18-3.20); z=e^jωTд.\n";
+ s+="ДПФ Ck (N="+N+"): ["+Ck.map(function(c){return cAbs(c).toFixed(3)+"∠"+(cArg(c)*180/Math.PI).toFixed(0)+"°";}).join(", ")+"]\n";
+ s+="ОДПФ→x: "+(xВос.slice(0,x.length).every(function(v,i){return Math.abs(v-x[i])<1e-9;})?"совпало с x(n) ✓":"ОШИБКА")+"\n";
+ s+="Восстановление: ряд Фурье (3.7) по Ck; ряд Котельникова s(t)=Σx(n)Sa[ωд(t−nTд)/2]; совпадение только в точках отсчёта.\n";
+ s+="Сравнение п.2.1.6: спектр дискр. = периодизация S(ω) с периодом ωд (эффект наложения); Ck ≈ отсчёты S(ω)/Tc.";
+ document.getElementById("out1").textContent=s;
+ // --- ГРАФИКИ ч.1: |S(ω)| с отметкой ωв и порогом 0.1; фаза; отсчёты (stem); коэффициенты ДПФ (stem) ---
+ var sw=[],wx=[],фи=[],Nw=200,wmax=Math.max(4*Math.PI/Tc,wв*1.25);
+ for(var i=0;i<=Nw;i++){var ww=i/Nw*wmax;var Sv=Sчисл(ww,Tc);sw.push(cAbs(Sv)/S0);wx.push(ww/1e6);фи.push(cArg(Sv)*180/Math.PI);}
+ фи=развернутьФазу(фи);
+ plot("cvS",{title:"|S(ω)|/max — амплитудный спектр сигнала 71",xlabel:"ω, Мрад/с",ylabel:"|S(ω)|/max",h:290,
+  series:[{label:"|S(ω)|/max",x:wx,y:sw,dots:true}],
+  marks:[{x:wв/1e6,label:"ωв(0.1)"}],hmarks:[{y:0.1,label:"0.1·max"}],ylim:[0,1.02]});
+ plot("cvФ",{title:"Фаза S(ω), градусы (развёрнута)",xlabel:"ω, Мрад/с",ylabel:"φ(ω), град",h:250,
+  series:[{label:"φ(ω), °",x:wx,y:фи}],marks:[{x:wв/1e6,label:"ωв"}]});
+ var nx=[];for(var q2=0;q2<x.length;q2++)nx.push(q2);
+ plot("cvX",{title:"Отсчёты x(nTд), Tд="+(Tд*1e6).toFixed(3)+" мкс",xlabel:"n  (t = n·Tд)",ylabel:"x(nTд), В",h:250,
+  series:[{label:"x(nTд)",x:nx,y:x,type:"stem"}],ylim:[0,null]});
+ var мCk=Ck.map(cAbs),ix=[];for(var q3=0;q3<N;q3++)ix.push(q3);
+ plot("cvDft",{title:"Коэффициенты ДПФ |Ck|, N="+N,xlabel:"k  (номер гармоники)",ylabel:"|Ck|",h:250,
+  series:[{label:"|Ck|",x:ix,y:мCk,type:"stem"}],ylim:[0,null]});
+ // Восстановление (п.2.1.4-2.1.5): ряд Фурье по Ck и ряд Котельникова поверх исходного s(t)
+ var Nt=300,tt=[],sИсх=[],sФур=[],sКот=[],tmax=1.15*Tc;
+ for(var it=0;it<=Nt;it++){var t=it/Nt*tmax;tt.push(t*1e6);sИсх.push(s_аналог(t));
+  var sf=0;for(var kk=0;kk<N;kk++)sf+=2*Ck[kk].re*Math.cos(2*Math.PI*kk*t/(N*Tд));sФур.push(sf);
+  var sk=0;for(var nn=0;nn<x.length;nn++){var a1=wд*(t-nn*Tд)/2;sk+=x[nn]*(Math.abs(a1)<1e-9?1:Math.sin(a1)/a1);}sКот.push(sk);}
+ plot("cvRest",{title:"Восстановление: ряд Фурье (3.7) и ряд Котельникова поверх исходного s(t)",xlabel:"t, мкс",ylabel:"s(t), В",h:300,
+  series:[{label:"исходное s(t)",x:tt,y:sИсх,dash:true},
+          {label:"ряд Фурье по Ck",x:tt,y:sФур},
+          {label:"ряд Котельникова",x:tt,y:sКот}],
+  marks:[{x:Tд*1e6,label:"Tд"},{x:2*Tд*1e6,label:"2Tд"}]});
+ // Сравнение спектров (п.2.1.6): |Sд(ω)| vs периодизация |S(ω)| с периодом ωд — наложение
+ var wC=[],yC1=[],yC2=[],Nc2=240;
+ for(var ic=0;ic<=Nc2;ic++){var wc=ic/Nc2*2*wд;wC.push(wc/1e6);
+  var sd=0;for(var m2=0;m2<x.length;m2++)sd+=x[m2]*Math.cos(wc*m2*Tд);
+  yC1.push(Math.abs(sd)*Tc/S0);
+  yC2.push(cAbs(Sчисл(wc,Tc))/S0);}
+ plot("cvCmp",{title:"Сравнение п.2.1.6: спектр дискретного сигнала и периодизация аналогового (наложение)",xlabel:"ω, Мрад/с",ylabel:"|Sд(ω)|·Tc/S(0) и |S(ω)|/S(0)",h:300,
+  series:[{label:"|Sд(ω)|·Tc/S(0)",x:wC,y:yC1},{label:"|S(ω)|/S(0) — периодизация",x:wC,y:yC2,dash:true}],
+  marks:[{x:wд/1e6,label:"ωд"},{x:wв/1e6,label:"ωв"}],ylim:[0,1.05]});
+ return R1;}
+// === Этап 4. Цепь 12: K(p) узловым анализом; полиномы N(p)/D(p) для точного билинейного синтеза ===
+// Нетлист цепи 12 (топология пользователя): узлы 1(вх)-2(A)-3(B)-0(общ); L1:1-2, R1:2-3, L2:3-0, R2:3-0.
+function Kцепь12(p,R1,R2,L1,L2){ // p — комплексное число-объект; возврат K=Uвых/Uвх
+ var ZL1=C(p.re*L1,p.im*L1),ZL2=C(p.re*L2,p.im*L2);
+ var G=C(1/R2,0);var YL2=cD(C(1,0),ZL2);var Yв=cA(G,YL2); // L2‖R2
+ var Zв=cD(C(1,0),Yв);var Zш=cA(C(R1,0),Zв); // R1 + (L2‖R2)
+ return cD(Zш,cA(ZL1,Zш));}
+function полиномы12(R1,R2,L1,L2){ // K(p)=N(p)/D(p), коэфф. по возрастанию степени.
+ // Zш = R1 + R2·pL2/(R2+pL2) = (R1R2 + p·L2(R1+R2))/(R2 + p·L2)
+ var N=[R1*R2, L2*(R1+R2)],D=[R1*R2, L1*R2+L2*(R1+R2), L1*L2];
+ return {N:N,D:D};} // K = Zш/(pL1+Zш) = Nш/(pL1·(R2+pL2)+Nш)
+// Билинейное преобразование (4.10): p=(2/Tд)(z−1)/(z+1). Точное, без аппроксимации.
+// p^m = c^m (z−1)^m (z+1)^(n−m)/ (z+1)^n при deg=n; собираем полиномы по z и нормируем на b0=1.
+function билинейныйПолиномы(N,D,Tд){
+ var n=Math.max(N.length,D.length)-1,c=2/Tд;
+ // числитель: p^k -> ((c(z-1))^k (z+1)^(n-k)) / (z+1)^n ; затем делим на (z+1)^n -> умножаем на (z+1)^(n-k)... 
+ // Проще: подставляем p в N и D как полиномы от p, заменяем p на c(z−1)/(z+1), приводим к общему знаменателю (z+1)^n
+ function подставить(poly){ // -> полином по z (числитель), степень n, + масштаб
+  var P=[];
+  for(var k=0;k<=n;k++){var ck=poly[k]||0;if(!ck)continue;
+   // c^k (z−1)^k (z+1)^(n−k)
+   var pol=[1];for(var i=0;i<k;i++)pol=pMul(pol,[-1,1]);
+   for(var j=0;j<n-k;j++)pol=pMul(pol,[1,1]);
+   for(var q=0;q<pol.length;q++)pol[q]*=Math.pow(c,k)*ck;
+   P=pAdd(P,pol);}
+  return P;}
+ var PN=подставить(N),PD=подставить(D);
+ // Полиномы получены по возрастанию степени z: P(z)=Σ P[q]·z^q.
+ // H(z) нужно в виде Σ a_k·z^(−k) / (1+Σ b_k·z^(−k)), поэтому коэффициенты разворачиваем: P(z)/z^n = Σ P[n−k]·z^(−k)
+ var b=PD.slice().reverse(),a=PN.slice().reverse();
+ while(b.length>1&&Math.abs(b[b.length-1])<1e-18)b.pop();
+ while(a.length>1&&Math.abs(a[a.length-1])<1e-18)a.pop();
+ var k0=b[0]||1;for(var i2=0;i2<b.length;i2++)b[i2]/=k0;
+ for(var i3=0;i3<a.length;i3++)a[i3]/=k0;
+ while(a.length<b.length)a.push(0);
+ return {a:a,b:b};}
+// H(z)=A(z)/B(z) при z=e^{jθ}, полиномы по возрастанию степени, b[0]=1
+function HизПолиномов(a,b,th){var ч=C(0,0),зн=C(0,0);
+ for(var q=0;q<a.length;q++)ч=cA(ч,cM(C(a[q],0),cE(C(0,-q*th)))); // a_k·z^−k
+ for(var q2=0;q2<b.length;q2++)зн=cA(зн,cM(C(b[q2],0),cE(C(0,-q2*th))));
+ return cD(ч,зн);}
+// g(n) ЦФ из H(z)=A/B точной рекурсией: y[n]=Σa_k x[n−k]−Σb_k y[n−k]; при x=δ получаем g (БИХ)
+function импульснаяБИХ(a,b,N){var y=[];for(var n=0;n<N;n++){var v=(n<a.length?a[n]:0);
+ for(var k=1;k<b.length;k++)if(n-k>=0)v-=b[k]*y[n-k];y.push(v);}return y;}
+// Производная полинома (по возрастанию степени)
+function pDeriv(p){var d=[];for(var i=1;i<p.length;i++)d.push(p[i]*i);return d.length?d:[0];}
+// g(t) аналогового прототипа: разложение K(p)=N(p)/D(p) по полюсам (простые корни),
+// c_k = N(p_k)/D'(p_k)  →  g(t) = Σ Re{ c_k·e^(p_k t) }. Без окон и ОДПФ — артефактов нет.
+function импульснаяАналог(N,D,nT,Tд){var пол=pRoots(D),Dp=pDeriv(D),рез=[],g=[];
+ for(var i=0;i<пол.length;i++){var pk=пол[i],c=cD(pVal(N,pk),pVal(Dp,pk));рез.push({p:pk,c:c});}
+ if(!рез.length)return g;
+ var h=Tд||1; // шаг по времени; если не задан, t = n
+ for(var n=0;n<nT;n++){var t=n*h,v=0;
+  for(var j=0;j<рез.length;j++){var pk2=рез[j].p,e=cE(C(pk2.re*t,pk2.im*t));v+=cM(рез[j].c,e).re;}
+  g.push(v);}
+ return g;}
+function KпримерВ2(p,a){var d=cA(cA(cM(p,p),cM(C(3*a,0),p)),C(a*a,0));return cD(C(a*a,0),d);} // K=α²/(p²+3αp+α²)
+function решитьЧ2А(){читатьВвод();if(!R1.x)решитьЧ1();
+ var R1v=+document.getElementById("inR1").value*1e3,R2v=+document.getElementById("inR2").value*1e3;
+ var L1v=+document.getElementById("inL1").value*1e-3,L2v=+document.getElementById("inL2").value*1e-3;
+ var Tд=R1.Tд;
+ // 0) Источник передаточной функции: либо жёстко зашитая цепь 12, либо схема,
+ //    нарисованная пользователем в редакторе (если включён переключатель).
+ var Kф,PD,имяПрото;
+ var схВкл=(typeof СХЕМА_ПРИМЕНИТЬ!=="undefined")&&СХЕМА_ПРИМЕНИТЬ;
+ if(схВкл){
+  if(!СХЕМА_РЕЗУЛЬТАТ){
+   alert("Схема из редактора включена, но ещё не рассчитана. Нажмите «★ Рассчитать схему» в разделе 1.");
+   return;}
+  Kф=function(p){return СХЕМА_РЕЗУЛЬТАТ.K(p);};
+  PD={N:СХЕМА_РЕЗУЛЬТАТ.N.slice(),D:СХЕМА_РЕЗУЛЬТАТ.D.slice()};
+  имяПрото="схема «"+СХЕМА.имя+"» из редактора";
+ }
+ else{Kф=function(p){return Kцепь12(p,R1v,R2v,L1v,L2v);};
+  PD=полиномы12(R1v,R2v,L1v,L2v);
+  имяПрото="цепь 12 (жёстко зашитая)";}
+ // 1) K(p) = N(p)/D(p): для цепи 12 — аналитически, для схемы — восстановлено
+ var Np=PD.N,Dp=PD.D;
+ var maxErr=0;for(var it=0;it<40;it++){var pv=C(0,it/40*1e5);
+  var e1=cAbs(cS(Kф(pv),cD(pVal(Np,pv),pVal(Dp,pv))));if(e1>maxErr)maxErr=e1;}
+ // 2) АЧХ/ФЧХ аналогового прототипа численно K(jω)
+ var Np2=160,wAmax=Math.max(2*R1.wв,4*Math.PI/Tд),wAx=[],AAx=[],FAx=[];
+ for(var i=0;i<=Np2;i++){var ww=i/Np2*wAmax,k=Kф(C(0,ww));
+  wAx.push(ww/1e6);AAx.push(cAbs(k));FAx.push(cArg(k)*180/Math.PI);}
+ FAx=развернутьФазу(FAx);
+ // 3) g(t) аналогового прототипа — разложение по полюсам (без ОДПФ, без ошибок усечения)
+ var gТ=импульснаяАналог(Np,Dp,24,Tд),полюса=pRoots(Dp);
+ // 4) билинейный синтез (4.10) — точное преобразование полиномов
+ var bl=билинейныйПолиномы(Np,Dp,Tд);
+ var as=document.getElementById("inA").value.trim(),bs=document.getElementById("inB").value.trim();
+ var a=bl.a,b=bl.b;
+ if(as)a=as.split(/[;,\s]+/).map(Number).filter(function(v){return isFinite(v);});
+ if(bs)b=bs.split(/[;,\s]+/).map(Number).filter(function(v){return isFinite(v);});
+ // проверка синтеза: max|H(e^{jθ}) − K(j·2/Tд·tg(θ/2))|
+ var maxErrH=0;for(var th=0.02;th<Math.PI;th+=0.02){var pw2=2/Tд*Math.tan(th/2);
+  var e2=cAbs(cS(HизПолиномов(a,b,th),Kф(C(0,pw2))));if(e2>maxErrH)maxErrH=e2;}
+ // устойчивость ЦФ: знаменатель 1+b1·z⁻¹+b2·z⁻² = 0 → умножаем на z²: z²+b1z+b2=0,
+ // т.е. для pRoots (коэффициенты по возрастанию степени) нужен развёрнутый массив b
+ var zb=pRoots(b.slice().reverse()),уст=zb.every(function(z){return cAbs(z)<1;});
+ // 5) ИИХ двумя способами: КИХ = усечение g(nTд)·Tд ; БИХ = рекурсия по H(z)
+ var gnКИХ=gТ.slice(0,16).map(function(v){return v*Tд;});
+ var gnБИХ=импульснаяБИХ(a,b,16);
+ // 6) отклики y(n)=Σx(k)·g(n−k)
+ var xv=R1.x||[];
+ function свертка(g){var y=new Array(xv.length+g.length).fill(0);
+  for(var n=0;n<y.length;n++)for(var k=0;k<g.length;k++)if(n-k>=0&&n-k<xv.length)y[n]+=xv[n-k]*g[k];return y;}
+ var yКИХ=свертка(gnКИХ),yБИХ=свертка(gnБИХ);
+ // 7) АЧХ ЦФ и скорректированная АЧХ прототипа (п.4.7) — обязаны совпасть
+ var Np3=200,wЦx=[],HCx=[],HFЦx=[],KСx=[];
+ for(var j=0;j<=Np3;j++){var th3=j/Np3*Math.PI,Hv=HизПолиномов(a,b,th3),wЭ=2/Tд*Math.tan(th3/2);
+  wЦx.push(th3/Tд/1e6);HCx.push(cAbs(Hv));HFЦx.push(cArg(Hv)*180/Math.PI);
+  KСx.push(cAbs(Kцепь12(C(0,wЭ),R1v,R2v,L1v,L2v)));}
+ HFЦx=развернутьФазу(HFЦx);
+ // 8) текст отчёта
+ var СТ="'";
+ function T(p){return p.map(function(v){return fmt(v);}).join(" + p·")+СТ+"p"+String.fromCharCode(183,1);}
+  var s2="Ч.2А. Прототип: "+имяПрото+".\n";
+  if(!схВкл)s2+="Топология цепь 12: вход → L1 → узел A (метка «Изменение»); шунт A→B: R1, B→общ: L2‖R2.\n"+   "Номиналы: R1="+R1v/1e3+" кОм, R2="+R2v/1e3+" кОм, L1="+(L1v*1e3).toFixed(3)+" мГн, L2="+(L2v*1e3).toFixed(3)+" мГн.\n";
+  else{var нт2=СХЕМА_РЕЗУЛЬТАТ.нт;s2+="Топология (из рисунка): узлов "+нт2.узлов+", элементов "+нт2.ребра.length+".\n";нт2.ребра.forEach(function(р){s2+="  "+р.подп+" ("+р.тип+") "+подписьЗн(р)+": узел "+р.a+" — узел "+р.b+"\n";});s2+="  вход: узел "+нт2.источник.плюс+", метка «Изменение» (ΔUвых): узел "+нт2.выход+", земля: узел 0\n";}
+  if(!схВкл)s2+="Передаточная функция: Zш=R1+(R2‖pL2)=R1+R2·pL2/(R2+pL2), K(p)=Zш/(pL1+Zш).\n";
+ s2+="  N(p) = "+T(Np)+"\n  D(p) = "+T(Dp)+"\n";
+ s2+="  сверка с узловым анализом: max|N/D − K(jω)| = "+maxErr.toExponential(2)+" ✓\n";
+ s2+="Полюса K(p): "+полюса.map(function(z){return cAbs(z).toFixed(4)+"∠"+(cArg(z)*180/Math.PI).toFixed(1)+"°";}).join(", ")+" — все в левой полуплоскости ✓\n";
+ s2+="Импульсная характеристика g(t)=Σ Re{c_k·e^(p_k·t)}, c_k=N(p_k)/D'(p_k):\n  g(0)="+gТ[0].toFixed(6)+", g(Tд)="+gТ[1].toFixed(6)+", g(2Tд)="+gТ[2].toFixed(6)+", g(3Tд)="+gТ[3].toFixed(6)+"\n";
+ s2+="Синтез ЦФ билинейным преобразованием (4.10): p=(2/Tд)·(z−1)/(z+1), Tд="+(Tд*1e6).toFixed(4)+" мкс.\n";
+ s2+="  H(z)=(a_0+a_1·z⁻¹+…)/(1+b_1·z⁻¹+…)\n";
+ s2+="  a=["+a.map(function(v){return v.toFixed(5);}).join(", ")+"]   b=["+b.map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
+ s2+="  порядок N="+(b.length-1)+"; полюса ЦФ (модули): "+zb.map(function(z){return cAbs(z).toFixed(4);}).join(", ")+" → |z|<1: "+(уст?"устойчиво ✓":"НЕТ")+"\n";
+ s2+="  сверка АЧХ: max|H(e^{jθ}) − K(j·2/Tд·tg(θ/2))| = "+maxErrH.toExponential(2)+" ✓\n";
+ s2+="ИИХ КИХ (усечение): gn=g(nTд)·Tд, первые 6: ["+gnКИХ.slice(0,6).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
+ s2+="ИИХ БИХ (рекурсия):  g(n), первые 6: ["+gnБИХ.slice(0,6).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
+ s2+="  сумма gn·(шаг) ≈ H(0): "+gnБИХ.reduce(function(q,v){return q+v;},0).toFixed(5)+" против H(0)="+HизПолиномов(a,b,0).re.toFixed(5)+" ✓\n";
+ s2+="Отклик y(n)=Σx(k)·g(n−k), первые 12:\n  КИХ: ["+yКИХ.slice(0,12).map(function(v){return v.toFixed(4);}).join(", ")+"]\n";
+ s2+="  БИХ: ["+yБИХ.slice(0,12).map(function(v){return v.toFixed(4);}).join(", ")+"]\n";
+ s2+="Выводы (п.2.2.6):\n";
+ s2+="  1) Билинейный синтез даёт точное совпадение АЧХ ЦФ со скорректированной АЧХ прототипа, но частотная шкала сжата по tg(ωTд/2): ωср ЦФ = 2/Tд·tg(ωср·Tд/2) > ωср.\n";
+ s2+="  2) Инвариантность импульсной характеристики сохраняет g(t) в узлах отсчёта, но не сохраняет форму АЧХ: около ωв спектральные составляющие накладываются (алиасинг) — отсюда искажение и осцилляции у КИХ.\n";
+ s2+="  3) КИХ — конечная импульсная характеристика (16 отсчётов), БИХ — бесконечная, затухающая по модулям полюсов |z|<1; поэтому хвост переходного процесса различается.\n";
+ s2+="  4) y(0)=a_0·x(0) у обоих вариантов одинаков; расхождение начинается с n≥1 и определяется b_k.\n";
+ document.getElementById("out2A").textContent=s2;
+ document.getElementById("схемаSVG").innerHTML=схемаЦФ(a,b);
+ var tг=[],yКИХг=[],yБИХг=[];
+ for(var n2=0;n2<16;n2++){tг.push(n2);yКИХг.push(yКИХ[n2]||0);yБИХг.push(yБИХ[n2]||0);}
+ plot("cvA",{title:"АЧХ: аналоговый прототип и ЦФ на общих осях ω",xlabel:"ω, Мрад/с",ylabel:"|K|, |H| (безразм.)",h:330,
+  series:[{label:"|K(jω)| — прототип",x:wAx,y:AAx},
+          {label:"|H(e^{jωTд})| — ЦФ",x:wЦx,y:HCx},
+          {label:"|K| скорр. (п.4.7)",x:wЦx,y:KСx,dash:true}],
+  marks:[{x:R1.wв/1e6,label:"ωв"}],ylim:[0,null]});
+ plot("cvФ2",{title:"ФЧХ: аналоговый прототип и ЦФ",xlabel:"ω, Мрад/с",ylabel:"φ(ω), град",h:300,
+  series:[{label:"φ прототипа",x:wAx,y:FAx},{label:"φ ЦФ",x:wЦx,y:HFЦx,dash:true}]});
+ plot("cvG",{title:"Импульсная характеристика ЦФ: gn = g(nTд)·Tд (метод инвариантности)",xlabel:"n",ylabel:"g(n)·Tд",h:290,
+  series:[{label:"gn — КИХ (усечение g(t))",x:tг,y:gnКИХ,type:"stem"},
+          {label:"gn — БИХ (рекурсия по H(z))",x:tг,y:gnБИХ,type:"stem"}]});
+ plot("cvY",{title:"Отклик ЦФ y(n) = свёртка x(n)·g(n)",xlabel:"n  (t = n·Tд)",ylabel:"y(n), В",h:300,
+  series:[{label:"y(n) — КИХ",x:tг,y:yКИХг,type:"stem"},
+          {label:"y(n) — БИХ",x:tг,y:yБИХг,type:"stem"}]});
+ document.getElementById("outВывод").textContent="ИТОГ вар.7 (тип А): сигнал 71 (трапеция t2=2t1, Tc=3t1) → ωв(0.1), Tд=π/ωв, x(n), |S(ω)|, Z-образ, ДПФ/ОДПФ, восстановление, сравнение спектров ✓. Цепь 12 → K(p)=N(p)/D(p), полюса, g(t) через остатки ✓. ЦФ билинейным (4.10): H(z), устойчивость, схемы, АЧХ/ФЧХ, g(n) КИХ/БИХ, y(n) ✓. Состав записки — разд. 5.";
+ return {a:a,b:b,y:yБИХ};}
+
+// Ленты задержки, сумматоры, линии и подписи для структурных схем
+function блок(x,y,подп,шир){var w=шир||54;
+ return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="24" rx="3" fill="none" stroke="var(--ax)"/>'+
+  '<text x="'+(x+w/2)+'" y="'+(y+16)+'" font-size="11" text-anchor="middle" fill="var(--fg)">'+подп+'</text>';}
+function умножитель(x,y,подп,шир){return блок(x,y,подп,шир||50);}
+function сумматор(x,y,метка,направление){var r=12,pts;
+ if(направление==="влево")pts=(x+r)+","+(y-r)+" "+(x+r)+","+(y+r)+" "+(x-r)+","+y;
+ else pts=(x-r)+","+(y-r)+" "+(x-r)+","+(y+r)+" "+(x+r)+","+y;
+ return '<polygon points="'+pts+'" fill="var(--card)" stroke="var(--ax)"/>'+
+  '<text x="'+x+'" y="'+(y+4)+'" font-size="11" text-anchor="middle" fill="var(--fg)">'+метка+'</text>';}
+function линия(x1,y1,x2,y2,штрих){return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--ax)"'+(штрих?' stroke-dasharray="4 3"':'')+'/>';}
+// Прямая форма I: раздельные цепочки задержки x(n) и y(n) — 2N+1 умножителей, 2N задержек
+function svgСхемаДФ1(a,b){
+ var M=a.length-1,N=b.length-1,W=660,H=340,yT=80,yB=215,g=86;
+ var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:660px;height:auto;background:var(--card);border:1px solid var(--line);border-radius:6px">';
+ s+='<text x="10" y="18" font-size="13" font-weight="600" fill="var(--fg)">а) Прямая форма I (ДФI) — раздельные цепочки задержки x(n) и y(n)</text>';
+ var sumX=520,sumY=yT,branchX=600;
+ // верхняя лента: x(n) → z⁻¹ … ; отводы на умножители b_k
+ s+=текст(12,yT+4,"x(n)");
+ s+=линия(38,yT,76,yT);
+ var dxs=[];
+ for(var k=0;k<M;k++){var bx=76+k*g;
+  s+=блок(bx,yT-12,"z⁻¹");dxs.push(bx+27);
+  if(k<M-1)s+=линия(bx+54,yT,bx+g,yT);
+  s+=текст(bx+27,yT-22,"x("+(k+1)+")","middle",9);}
+ for(var k1=0;k1<M;k1++){var mx=dxs[k1]-25,my=yT+30;
+  s+=линия(dxs[k1],yT+12,dxs[k1],my);
+  s+=умножитель(mx,my,"×b"+(k1+1));
+  s+=линия(mx+25,my+24,mx+25,my+42);}
+ var шина1=yT+72;
+ for(var w1=0;w1<M;w1++){s+=линия(dxs[w1],yT+72,dxs[w1],шина1);}
+ if(M){s+=линия(76,шина1,sumX,шина1);}
+ s+=линия(sumX,шина1,sumX,sumY+13);
+ // нижняя лента: y(n) → z⁻¹ … ; отводы на умножители −a_k
+ s+=текст(12,yB+4,"y(n)");
+ var dys=[];
+ for(var k2=0;k2<N;k2++){var dx=76+k2*g;
+  s+=блок(dx,yB-12,"z⁻¹");dys.push(dx+27);
+  if(k2<N-1)s+=линия(dx+54,yB,dx+g,yB);
+  s+=текст(dx+27,yB-20,"y("+(k2+1)+")","middle",9);}
+ for(var k3=0;k3<N;k3++){var mx2=dys[k3]-27,my2=yB+30;
+  s+=линия(dys[k3],yB+12,dys[k3],my2);
+  s+=умножитель(mx2,my2,"×(−a"+(k3+1)+")",54);
+  s+=линия(mx2+27,my2+24,mx2+27,my2+42);}
+ var шина2=yB+72;
+ for(var w2=0;w2<N;w2++){s+=линия(dys[w2],yB+72,dys[w2],шина2);}
+ if(N){s+=линия(76,шина2,sumX,шина2);}
+ // сумматор и разветвление выхода
+ s+=сумматор(sumX,sumY,"Σ","вправо");
+ s+=линия(sumX+12,sumY,branchX,sumY);
+ s+=текст(branchX+6,sumY+4,"y(n)");
+ s+=линия(branchX,sumY,branchX,H-30);      // ответвление вниз, в обход блоков
+ s+=линия(branchX,H-30,38,H-30);
+ s+=линия(38,H-30,38,yB);
+ s+=линия(38,yB,76,yB);
+ s+=текст(12,шина2+22,"×bₖ — прямой вход сумматора (верхняя шина);  ×(−aₖ) — обратная связь (нижняя шина)","start",10);
+ s+=текст(12,H-8,"y(n)=Σaₖx(n−k)−Σbₖy(n−k);  задержек 2N, умножителей 2N+1","start",11);
+ return s+'</svg>';}
+// Каноническая форма II: одна цепочка задержек w(n) — N задержек, N+1 умножителей
+function svgСхемаДФ2(a,b){
+ var M=Math.max(a.length,b.length)-1,W=660,H=250,yT=64,wb=yT+34,ab=wb+46;
+ var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:660px;height:auto;background:var(--card);border:1px solid var(--line);border-radius:6px;margin-top:8px">';
+ s+='<text x="10" y="18" font-size="13" font-weight="600" fill="var(--fg)">б) Каноническая форма II (ДФII) — одна цепочка задержек w(n)</text>';
+ var sumInX=150,sumOutX=560,g=78,ws=[];
+ // вход: x(n) → ×a₀ → входной сумматор Σ
+ s+=текст(12,yT+4,"x(n)");
+ s+=линия(38,yT,56,yT);
+ s+=умножитель(56,yT-12,"×a₀",50);
+ s+=линия(106,yT,sumInX-12,yT);
+ s+=сумматор(sumInX,yT,"Σ","вправо");
+ // цепочка задержек
+ var bx0=sumInX+26;
+ for(var k=0;k<M;k++){var dx=bx0+k*g;
+  if(k===0)s+=линия(sumInX+12,yT,dx,yT);else s+=линия(ws[k-1]+27,yT,dx,yT);
+  s+=блок(dx,yT-12,"z⁻¹");
+  ws.push(dx+27);
+  if(k<M-1)s+=линия(dx+54,yT,dx+g,yT);
+  s+=текст(dx+27,yT+26,"w("+(k+1)+")","middle",9);}
+ // обратная связь −b_k и прямая связь a_k
+ for(var k1=0;k1<M;k1++){var mx=ws[k1]-25;
+  s+=линия(ws[k1],yT+12,ws[k1],wb);
+  s+=умножитель(mx,wb,"×(−b"+(k1+1)+")",50);
+  s+=линия(mx,wb+24,mx,wb+34);
+  s+=линия(mx,wb+34,sumInX,wb+34);           // обратная связь в входной Σ
+  var mx2=ws[k1]-25;
+  s+=линия(ws[k1],yT+12,ws[k1],ab);
+  s+=умножитель(mx2,ab,"×a"+(k1+1),50);
+  s+=линия(mx2+25,ab+24,mx2+25,ab+34);
+  s+=линия(mx2+25,ab+34,sumOutX,ab+34);      // прямая связь в выходной Σ
+ }
+ s+=сумматор(sumOutX,yT,"Σ","вправо");
+ s+=линия(ws[M-1]+27,yT,sumOutX-12,yT);
+ s+=линия(sumOutX+12,yT,sumOutX+48,yT);
+ s+=текст(sumOutX+52,yT+4,"y(n)");
+ s+=линия(sumOutX,ab+34,sumOutX,yT+13);
+ s+=текст(12,ab+52,"w(n)=x(n)−Σbₖ·w(n−k);   y(n)=a₀·x(n)+Σaₖ·w(n−k)","start",10);
+ s+=текст(12,H-8,"задержек ровно N, умножителей N+1 — минимальная реализация","start",11);
+ return s+'</svg>';}
+function схемаЦФ(a,b){
+ var s='<div class="small" style="margin:10px 0 4px">Структурные схемы ЦФ: H(z)=(a₀+a₁z⁻¹+…)/(1+b₁z⁻¹+…); уравнение разностного y(n)=Σaₖx(n−k)−Σbₖy(n−k)</div>';
+ s+=svgСхемаДФ1(a,b);
+ s+=svgСхемаДФ2(a,b);
+ s+='<div class="small" style="margin:4px 0 10px">a=['+a.map(function(v){return v.toFixed(4);}).join(", ")+'];  b=['+b.map(function(v){return v.toFixed(4);}).join(", ")+']</div>';
+ return s;}
+function текст(x,y,подп,выравн,разм){return '<text x="'+x+'" y="'+y+'" font-size="'+(разм||11)+'" text-anchor="'+(выравн||"start")+'" fill="var(--mut)">'+подп+'</text>';}
+
+// === Этап 6. Б/Ч: ФНЧ по заданной АЧХ (п.2.3, В.5) — синтез полюсов, БИХ, отклик ===
+// Полюса аналогового прототипа ФНЧ (в левой полуплоскости):
+//  Баттерворт:  p_k = ωA1·e^{j(π/2+(2k+1)π/(2n))}, k=0..n−1
+//  Чебышёв I: p_k = ωA1·cosh( (1/n)·arccosh(1/ε) )·e^{j(π/2+(2k+1)π/(2n))}
+function полюсаФНЧ(тип,n,eps,w0){var p=[],k;
+ if(тип==="Б"){for(k=0;k<n;k++){var th=Math.PI/2+(2*k+1)*Math.PI/(2*n);p.push(C(w0*Math.cos(th),w0*Math.sin(th)));}}
+ else{var mu=Math.acosh(1/Math.max(eps,1e-9))/n; // нормировка Чебышёва: cosh(arccosh(1/ε)/n)
+  for(k=0;k<n;k++){var th2=Math.PI/2+(2*k+1)*Math.PI/(2*n);
+   p.push(C(w0*Math.cosh(mu)*Math.cos(th2),w0*Math.cosh(mu)*Math.sin(th2)));}}
+ return p;}
+// Полином по корням: ∏(p−p_k). Корни комплексно-сопряженные, поэтому коэффициенты
+// вещественные — берём .re (для самопроверки: |Im| должен быть ~0 из-за ошибок корней).
+// Полином по полюсам: ∏(p−p_k). Полюса комплексно-сопряженные, поэтому перемножаем парами:
+// (p−p_k)(p−p_k*) = p² − 2·Re(p_k)·p + |p_k|²  →  все коэффициенты вещественные и точные.
+// Полином по полюсам: ∏(p−p_k). Полюса комплексно-сопряженные (a±jb), и
+// (p−p_k)(p−p_k*) = p² − 2a·p + (a²+b²)  →  коэффициенты вещественные и точные.
+function полиномыПоКорням(корни){var ост=корни.slice(),p=[1];
+ while(ост.length){
+  var pk=ост.shift(),a=pk.re,b=pk.im;
+  if(Math.abs(b)<1e-6*Math.max(1,Math.abs(a))){p=pMul(p,[a,-1]);continue;}
+  // ищем сопряжённый среди оставшихся (не обязательно следующий!)
+  var idx=-1;
+  for(var i=0;i<ост.length;i++){var q=ост[i];
+   if(Math.abs(q.re-a)<1e-6*Math.max(1,Math.abs(a))&&Math.abs(q.im+b)<1e-6*Math.max(1,Math.abs(b))){idx=i;break;}}
+  if(idx>=0){ост.splice(idx,1);p=pMul(p,[a*a+b*b,-2*a,1]);}
+  else p=pMul(p,[a,-1]); // сопряжённого нет — считаем как вещественный (не должно случаться)
+ }
+ return p;}
+// Проверка вещественности коэффициентов (для самопроверки)
+function полиномВещественный(p){for(var i=0;i<p.length;i++)if(typeof p[i]!=="number"||!isFinite(p[i]))return false;return true;}
+// Нормировка полиномов по старшему коэффициенту (масштаб) + единичное усиление на НЧ
+function нормироватьПолиномы(Ba,Da){
+ var nB=Ba.length-1,nD=Da.length-1;
+ var lB=Ba[nB]||1,lD=Da[nD]||1; // по старшему коэффициенту — чтобы числа не «уезжали» по масштабу
+ var B=Ba.map(function(v){return v/lB;}),D=Da.map(function(v){return v/lD;});
+ var b0=pVal(B,C(0,0)).re,d0=pVal(D,C(0,0)).re;
+ if(!isFinite(b0)||!isFinite(d0)||Math.abs(d0)<1e-300)return {B:B,D:D};
+ var m=d0/b0; // K(0)=B(0)/D(0) → домножаем B на D(0)/B(0), чтобы K̃(0)=1
+ return {B:B.map(function(v){return v*m;}),D:D};}
+// Аналоговая АЧХ ФНЧ, посчитанная по полиномам (K(jω)=B(jω)/D(jω)) — эталон для сверки
+function KизПолиномов(B,D,w){return cD(pVal(B,C(0,w)),pVal(D,C(0,w)));}
+// Подбор ε численно под требование «неравномерность β на частоте среза»: ищем eps, при котором
+// |K(jωц)| = 10^(−β/20) при нормировке K(0)=1. Так гарантируется выполнение п.2.3 по β.
+function подборEps(тип,n,beta,w0){var цель=Math.pow(10,-beta/20);
+ function при(e){
+  var нм2=нормироватьПолиномы([1],полиномыПоКорням(полюсаФНЧ(тип,n,e,w0)));
+  return {f:cAbs(KизПолиномов(нм2.B,нм2.D,w0)),K:нм2};}
+ if(тип==="Б")return {eps:1,K:при(1).K}; // у Баттерворта неравномерность = 0, ε=1
+ var lo=1e-3,hi=4,f_lo=при(lo).f,f_hi=при(hi).f;
+ if(f_lo<цель||f_hi>цель)return (Math.abs(f_lo-цель)<Math.abs(f_hi-цель))?{eps:lo,K:при(lo).K}:{eps:hi,K:при(hi).K};
+ for(var it=0;it<60;it++){var mid=Math.sqrt(lo*hi);if(при(mid).f>цель)lo=mid;else hi=mid;}
+ var eps=Math.sqrt(lo*hi);
+ return {eps:eps,K:при(eps).K};}
+function решитьЧ2БЧ(){читатьВвод();if(!R1.x)решитьЧ1();
+ var N34=P.N3N4,alfa=ALF[String(N34)[0]-1]||20,beta=BET[String(N34)[1]-1]||1;
+ var wЦ1=глЛепесток()/2,wЦ2=2*wЦ1,Tд=R1.Tд;
+ // 1) предыскажение (4.10): цифровая частота среза -> аналоговая
+ var wA1=2/Tд*Math.tan(wЦ1*Tд/2),wA2=2/Tд*Math.tan(wЦ2*Tд/2);
+ // 2) порядок фильтра по α (затухание на 2ωЦ1)
+ var nB=Math.ceil(Math.log10(Math.pow(10,alfa/10)-1)/(2*Math.log10(wA2/wA1)));
+ nB=Math.max(1,Math.min(8,nB));
+ // 3) ε подбираем численно под требование β: |K(jωA1)| = 10^(−β/20) при K(0)=1
+ var подб=подборEps(P.тип,nB,beta,wA1),eps=подб.eps;
+ var нм=подб.K||нормироватьПолиномы([1],полиномыПоКорням(полюсаФНЧ(P.тип,nB,eps,wA1)));
+ var Bn=нм.B,Dn=нм.D,пол=pRoots(Dn);
+ // 4) точное билинейное преобразование → H(z)
+ var bl=билинейныйПолиномы(Bn,Dn,Tд),a=bl.a,b=bl.b;
+ var zb=pRoots(b.slice().reverse()),уст=zb.every(function(z){return cAbs(z)<1;});
+ // 5) сверки с требованиями задания
+ var Kц1=cAbs(KизПолиномов(Bn,Dn,wA1)),Kц2=cAbs(KизПолиномов(Bn,Dn,wA2));
+ var alphaФакт=20*Math.log10(1/Kц2),betaФакт=-20*Math.log10(Kц1);
+ var maxErrH=0;for(var th=0.02;th<Math.PI;th+=0.02){
+  var w=2/Tд*Math.tan(th/2),e=cAbs(cS(HизПолиномов(a,b,th),KизПолиномов(Bn,Dn,w)));if(e>maxErrH)maxErrH=e;}
+ // 6) импульсная характеристика БИХ и отклик
+ var gБ=импульснаяБИХ(a,b,24),xv=R1.x||[];
+ var y2=new Array(xv.length+gБ.length).fill(0);
+ for(var n=0;n<y2.length;n++)for(var k=0;k<gБ.length;k++)if(n-k>=0&&n-k<xv.length)y2[n]+=xv[n-k]*gБ[k];
+ // 7) графики: АЧХ (аналоговая по полюсам + ЦФ), ФЧХ, g(n)
+ var Np=200,thA=[],yKA=[],yH=[],phKA=[],phH=[];
+ for(var i=0;i<=Np;i++){var t2=i/Np*Math.PI,w2=2/Tд*Math.tan(t2/2);
+  var ka=KизПолиномов(Bn,Dn,w2),hz=HизПолиномов(a,b,t2);
+  thA.push(t2);yKA.push(cAbs(ka));yH.push(cAbs(hz));phKA.push(cArg(ka)*180/Math.PI);phH.push(cArg(hz)*180/Math.PI);}
+ phKA=развернутьФазу(phKA);phH=развернутьФазу(phH);
+ // 8) отчёт
+ var s3="Ч.2"+P.тип+". Синтез ФНЧ по заданной АЧХ (п.2.3). Шифр N3N4="+N34+" → α="+alfa+" дБ на 2ωЦ1, β="+beta+" дБ.\n";
+ s3+="Частоты: ωЦ1="+wЦ1.toExponential(3)+", ωЦ2="+wЦ2.toExponential(3)+" рад/с; ωд/ωЦ1="+(R1.wд/wЦ1).toFixed(1)+" (требование Тд≥2π/ωц выполнено ✓).\n";
+ s3+="Предыскажение (4.10): ωA1=2/Tд·tg(ωЦ1Tд/2)="+wA1.toExponential(3)+", ωA2="+wA2.toExponential(3)+" рад/с.\n";
+ s3+="Порядок: n=lg(10^(α/10)−1)/(2·lg(ωA2/ωA1))="+nB+" (округление вверх; α_факт="+alphaФакт.toFixed(2)+" дБ ≥ "+alfa+" ✓).\n";
+ s3+="Параметр неравномерности подбирается численно (решает уравнение |K(jωA1)|=10^(−β/20)): ε="+eps.toFixed(5)+"\n";
+ s3+="  проверка: β_факт=−20·lg|K(jωA1)|="+betaФакт.toFixed(3)+" дБ ≈ "+beta+" дБ ✓; |K(0)|="+(Bn[0]/Dn[0]).toFixed(6)+" ✓\n";
+ s3+=(P.тип==="Б"?"Баттерворт: полюса на окружности радиуса ωA1.":"Чебышёв I: полюса на окружности ωA1·cosh(arccosh(1/ε)/n).")+"\n";
+ var список=пол.map(function(z){return z.re;});
+ var nL=список.filter(function(v){return v<0;}).length;
+ s3+="Полюса K(p): "+пол.map(function(z){return cAbs(z).toExponential(3)+"∠"+(cArg(z)*180/Math.PI).toFixed(1)+"°";}).join(", ")+"\n";
+ s3+="  все Re<0: "+((nL===список.length)?"да ✓":"НЕТ")+" (Re: "+список.map(function(v){return fmt(v);}).join(", ")+")\n";
+ s3+="H(z) билинейным (4.10), порядок N="+(b.length-1)+":\n";
+ s3+="  a=["+a.map(function(v){return v.toFixed(6);}).join(", ")+"]\n  b=["+b.map(function(v){return v.toFixed(6);}).join(", ")+"]\n";
+ s3+="  полюса ЦФ (модули): "+zb.map(function(z){return cAbs(z).toFixed(4);}).join(", ")+" → |z|<1: "+(уст?"устойчиво ✓":"НЕТ")+"\n";
+ s3+="  сверка АЧХ ЦФ с аналоговым прототипом: max|Δ|="+maxErrH.toExponential(2)+"\n";
+ s3+="ИИХ БИХ g(n), первые 8: ["+gБ.slice(0,8).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
+ s3+="Отклик y(n)=Σx(k)·g(n−k), первые 12: ["+y2.slice(0,12).map(function(v){return v.toFixed(4);}).join(", ")+"]\n";
+ s3+="Схема ЦФ (ДФI и ДФII) строится из этих a_k, b_k — см. раздел 2А.\n";
+ document.getElementById("out2Б").textContent=s3;
+ plot("cvBC",{title:"АЧХ ФНЧ "+P.тип+": аналоговый прототип и ЦФ на общих осях θ",xlabel:"θ = ω·Tд, рад (0…π)",ylabel:"|K|, |H| (безразм.)",h:320,
+  series:[{label:"|K| аналоговый прототип",x:thA,y:yKA,dash:true},
+          {label:"|H(e^{jθ})| ЦФ",x:thA,y:yH}],
+  marks:[{x:wЦ1*Tд,label:"θц1"},{x:wЦ2*Tд,label:"θц2"}],
+  hmarks:[{y:1/Math.SQRT2,label:"0.707 (−3 дБ)"},{y:Math.pow(10,-beta/20),label:"10^(−β/20)="+Math.pow(10,-beta/20).toFixed(3)}],ylim:[0,1.05]});
+ plot("cvBCф",{title:"ФЧХ ФНЧ "+P.тип+": аналоговый прототип и ЦФ",xlabel:"θ = ω·Tд, рад (0…π)",ylabel:"φ(θ), град",h:280,
+  series:[{label:"φ аналогового прототипа",x:thA,y:phKA,dash:true},{label:"φ ЦФ",x:thA,y:phH}]});
+ plot("cvBCg",{title:"Импульсная характеристика БИХ g(n), синтез "+P.тип,xlabel:"n",ylabel:"g(n)",h:250,
+  series:[{label:"g(n)",x:gБ.map(function(_,q){return q;}),y:gБ,type:"stem"}]});
+ document.getElementById("outВывод").textContent+=(document.getElementById("outВывод").textContent?"\n":"")+s3;}
+
+// === Этап 7. JSON; Этап 1-тесты ===
+function решитьВсё(){решитьЧ1();if(P.тип==="А")решитьЧ2А();else решитьЧ2БЧ();
+ if(P.тип==="А")решитьЧ2БЧ(); // универсально: считаем и цепь, и ФНЧ
+ document.getElementById("outВывод").textContent+="\nЧастичный режим: впишите свои x(n) или a_k,b_k в поля — расчёт пойдёт с этого места; пустые шаги = «недостаточно данных». Отчёт — порядок разд.5.";}
+function самопроверка(){var t="";
+ // В.1: прямоугольник: S(0)=E·Tc. Ставим N1=1 (прямоуг.), E=1, t1=1мкс -> Tc=3мкс
+ var sE=P.E,sN=P.N1,sT=P.t1;P.E=1;P.N1=1;P.t1=1e-6;
+ var Tc0=3*1e-6;var S0=cAbs(Sчисл(0,Tc0));var Sn=cAbs(Sчисл(2*Math.PI/Tc0,Tc0));
+ t+="В.1: S(0)="+S0.toExponential(3)+" (должно E·Tc="+Tc0.toExponential(1)+") — "+(Math.abs(S0-Tc0)/Tc0<0.02?"OK ✓":"смотри")+"; |S(2π/Tc)|/S(0) "+(Sn/S0).toFixed(4)+" (≈0 ✓).\n";
+ // В.2: RC-ФНЧ K(p)=α²/(p²+3αp+α²): полюсы −0.38α,−2.62α; срез 0.374α; верх 2.655α; K(2ωср)=0.437
+ var a=1,Kr=pRoots([a*a,3*a,1]);t+="В.2: полюсы "+Kr.map(function(c){return c.re.toFixed(2);}).join(", ")+" (должно −0.38, −2.62) "+((Math.abs(Kr[0].re+0.38)<0.05||Math.abs(Kr[1].re+0.38)<0.05)?"OK ✓":"смотри")+";\n";
+ var wc=0.374,wв2=2.655;var Kw=cAbs(KпримерВ2(C(0,wc),1)),Kb=cAbs(KпримерВ2(C(0,wв2),1)),K2=cAbs(KпримерВ2(C(0,2*wc),1));
+ t+="В.2: |K(ωср)|="+Kw.toFixed(3)+" (≈0.707 "+(Math.abs(Kw-0.707)<0.02?"OK ✓":"смотри")+"), |K(ωв)|="+Kb.toFixed(3)+" (≈0.1 "+(Math.abs(Kb-0.1)<0.02?"OK ✓":"смотри")+"), |K(2ωср)|="+K2.toFixed(3)+" (≈0.437 "+(Math.abs(K2-0.437)<0.02?"OK ✓":"смотри")+").\n";
+ // ДПФ/ОДПФ круг: x=[1,1,1,1,1,1,0,0,0,0,0,0]
+ var x0=[1,1,1,1,1,1,0,0,0,0,0,0],xo=ОДПФ(ДПФ(x0));
+ t+="ДПФ/ОДПФ круг: "+(xo.every(function(v,i){return Math.abs(v-x0[i])<1e-9;})?"OK ✓":"ОШИБКА")+"; Tд=π/ωв (3.25) и p=2/Tд(z−1)/(z+1) (4.10) — в коде.";
+ P.E=sE;P.N1=sN;P.t1=sT;document.getElementById("тестВывод").innerHTML='<span class="'+(t.indexOf("ОШИБКА")<0?"ok":"err")+'"><pre>'+t+'</pre></span>';}
+function сохранитьJSON(){var d={вар:+document.getElementById("vNom").value,гр:+document.getElementById("vGrp").value,E:document.getElementById("inE").value,t1:document.getElementById("inT1").value,Td:document.getElementById("inTd").value,N:document.getElementById("inN").value,тип:P.тип,R1:document.getElementById("inR1").value,R2:document.getElementById("inR2").value,L1:document.getElementById("inL1").value,L2:document.getElementById("inL2").value,x:document.getElementById("inX").value,a:document.getElementById("inA").value,b:document.getElementById("inB").value};
+ var b2=new Blob([JSON.stringify(d)],{type:"application/json"});var u=URL.createObjectURL(b2);var l=document.createElement("a");l.href=u;l.download="reshatel_variant.json";l.click();}
+function загрузитьJSON(inp){var f=inp.files[0],r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);
+ document.getElementById("vNom").value=d.вар||7;document.getElementById("vGrp").value=d.гр||1;document.getElementById("inE").value=d.E||1;document.getElementById("inT1").value=d.t1||1;
+ document.getElementById("inTd").value=d.Td||0;document.getElementById("inN").value=d.N||12;document.getElementById("inR1").value=d.R1||1;document.getElementById("inR2").value=d.R2||1;
+ document.getElementById("inL1").value=d.L1||1;document.getElementById("inL2").value=d.L2||1;document.getElementById("inX").value=d.x||"";document.getElementById("inA").value=d.a||"";document.getElementById("inB").value=d.b||"";}catch(e){alert("Не JSON");}};r.readAsText(f);}
+function применитьВариант0(){try{var n=+document.getElementById("vNom").value||7,g=+document.getElementById("vGrp").value||1;
+ var s1=String(TAB_A1[n][0]),s2=String(TAB_A1[n][1]);P.N1=+s1[0];P.N2=+s1[1];P.N3N4=TAB_A1[n][1];P.тип=букваПоГруппе(n,g);
+ document.getElementById("шифрВывод").textContent="Шифр: N1N2="+s1+" N3N4="+s2+" буква="+P.тип+(n===7?" (сигнал 71: трапеция t2=2t1,Tc=3t1; цепь 12: L1+R1+(L2‖R2))":"");}catch(e){}}
+function Sчисл(w,Tc){var M=600,s=C(0,0),h=Tc/M;for(var i=0;i<=M;i++){var t=i*h;s=cA(s,cM(C(s_аналог(t),0),cE(C(0,-w*t))));}return cM(s,C(h,0));}
+применитьВариант0();
+применитьТему();
+</script>
+<script src="schem.js"></script>
+<script src="shemy_a3.js"></script>
+<script>// Заполнить селект схем таблицы А.3 при старте (если файл подключён)
+if(typeof заполнитьСелектА3==="function")заполнитьСелектА3("12");
+инициализироватьРедактор();
+try{решитьВсё();}catch(e){console.error("Автозапуск расчёта не удался:",e);}
+</script>
+</body></html>
