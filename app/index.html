@@ -16,7 +16,10 @@ h2{font-size:16px;background:var(--h2bg);padding:6px 8px;border-radius:6px}
 h2.свёртываем{cursor:pointer;user-select:none;position:relative;padding-right:26px}
 h2.свёртываем::after{content:"▾";position:absolute;right:8px;top:6px;font-size:13px;opacity:.7}
 .card.свёрнуто h2.свёртываем::after{content:"▸"}
-.card.свёрнуто>*:not(h2){display:none}
+/* !important обязателен: часть блоков (графики .gfx, редактор схем, pre)
+   задаёт display своими правилами и перебивала обычное display:none —
+   из-за этого сворачивался только текст, а графики и схема оставались. */
+.card.свёрнуто>*:not(h2){display:none!important}
 @media print{.card.свёрнуто>*:not(h2){display:block!important}
  h2.свёртываем::after{content:""}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}
