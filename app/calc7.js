@@ -37,7 +37,9 @@ say(`S(0) = E·(t1/2 + (t2-t1)) = ${(S0*1e6).toFixed(4)} мкВ·с = ${S0.toExp
 say(`S(t) = 0 при t<0; = E·t/t1 при 0<=t<t1; = E при t1<=t<t2; = 0 при t2<=t<Tc`);
 say(`t2 = 2t1 = ${(t2*1e6).toFixed(0)} нс ; Tc = 3t1 = ${(Tc*1e6).toFixed(0)} нс`);
 
-// omega_в: ПЕРВОЕ пересечение уровня 0,1*max
+// omega_в по определению методички: уровень 0,1·max, выше которого модуль НЕ превышается.
+// Поэтому берём ПОСЛЕДНЕЕ пересечение вниз: между пересечениями боковой лепесток
+// поднимается до 0,1299·max > 0,1, так что первое пересечение не удовлетворяет определению.
 const level=0.1*S0, cross=[], WMAX=40e6, NG=40000;
 let pw=0, prev=S0;
 for(let i=1;i<=NG;i++){
@@ -49,9 +51,16 @@ for(let i=1;i<=NG;i++){
   }
   pw=w; prev=cur;
 }
-say(`пересечения уровня 0,1·max: ${cross.map(w=>(w/1e6).toFixed(4)+' МГц').join(' ; ')}`);
-const wv=cross[0];
-say(`omega_в = ПЕРВОЕ пересечение = ${(wv/1e6).toFixed(4)} МГц = ${wv.toExponential(4)} рад/с`);
+say(`пересечения уровня 0,1·max (вниз): ${cross.map(w=>(w/1e6).toFixed(4)+' МГц').join(' ; ')}`);
+// боковой лепесток между пересечениями — доказательство, что первое не годится
+{
+  let pk=0,pv=0;
+  for(let w=cross[0];w<=cross[cross.length-1];w+=WMAX/NG/20){const v=abs(S(w));if(v>pv){pv=v;pk=w;}}
+  say(`боковой лепесток между пересечениями: max |S| = ${(pv*1e6).toFixed(4)} = ${(pv/S0*100).toFixed(2)} % от max при w = ${(pk/1e6).toFixed(3)} МГц  (> 10 % => первое пересечение не подходит)`);
+}
+const wv=cross[cross.length-1];
+say(`omega_в = ПОСЛЕДНЕЕ пересечение = ${(wv/1e6).toFixed(4)} МГц = ${wv.toExponential(4)} рад/с`);
+say(`N_min = ceil(Tc/Tд) = ${Math.ceil(Tc/(PI/wv))}  (в записке взято N = 12)`);
 
 // Тд по формуле (3.25) методички
 const Td=PI/wv;
