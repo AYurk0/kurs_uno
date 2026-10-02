@@ -10,6 +10,15 @@ body{font-family:Arial,sans-serif;max-width:1120px;margin:0 auto;padding:12px;ba
 .ttl h1{font-size:22px;margin:0;flex:1 1 420px}
 #кнопкаТемы{font-size:13px;padding:4px 10px}
 h2{font-size:16px;background:var(--h2bg);padding:6px 8px;border-radius:6px}
+/* --- сворачивание разделов: клик по заголовку карточки ---
+   Заголовок получает курсор и стрелку; у свёрнутой карточки всё, кроме
+   самого заголовка (и возможных вложенных h3), скрывается. */
+h2.свёртываем{cursor:pointer;user-select:none;position:relative;padding-right:26px}
+h2.свёртываем::after{content:"▾";position:absolute;right:8px;top:6px;font-size:13px;opacity:.7}
+.card.свёрнуто h2.свёртываем::after{content:"▸"}
+.card.свёрнуто>*:not(h2){display:none}
+@media print{.card.свёрнуто>*:not(h2){display:block!important}
+ h2.свёртываем::after{content:""}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}
 label{display:inline-block;margin:4px 8px 4px 0}input,select{font-size:14px;padding:3px 6px;background:var(--card);color:var(--fg)}
 input[type=number]{width:80px}
@@ -339,10 +348,10 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  var wC=[],yC1=[],yC2=[],Nc2=240;
  for(var ic=0;ic<=Nc2;ic++){var wc=ic/Nc2*2*wд;wC.push(wc/1e6);
   var sd=0;for(var m2=0;m2<x.length;m2++)sd+=x[m2]*Math.cos(wc*m2*Tд);
-  yC1.push(Math.abs(sd)*Tc/S0);
+  yC1.push(Math.abs(sd)*Tд/S0);
   yC2.push(cAbs(Sчисл(wc,Tc))/S0);}
- plot("cvCmp",{title:"Сравнение п.2.1.6: спектр дискретного сигнала и периодизация аналогового (наложение)",xlabel:"ω, Мрад/с",ylabel:"|Sд(ω)|·Tc/S(0) и |S(ω)|/S(0)",h:300,
-  series:[{label:"|Sд(ω)|·Tc/S(0)",x:wC,y:yC1},{label:"|S(ω)|/S(0) — периодизация",x:wC,y:yC2,dash:true}],
+ plot("cvCmp",{title:"Сравнение п.2.1.6: спектр дискретного сигнала и периодизация аналогового (наложение)",xlabel:"ω, Мрад/с",ylabel:"|Sд(ω)|·Тд/S(0) и |S(ω)|/S(0)",h:300,
+  series:[{label:"|Sд(ω)|·Тд/S(0)",x:wC,y:yC1},{label:"|S(ω)|/S(0) — периодизация",x:wC,y:yC2,dash:true}],
   marks:[{x:wд/1e6,label:"ωд"},{x:wв/1e6,label:"ωв"}],ylim:[0,1.05]});
  return R1;}
 // === Этап 4. Цепь 12: K(p) узловым анализом; полиномы N(p)/D(p) для точного билинейного синтеза ===
@@ -776,5 +785,51 @@ function Sчисл(w,Tc){var M=600,q=парамСиг(),точки=[0,P.t1,q.t2,
 if(typeof заполнитьСелектА3==="function")заполнитьСелектА3("12");
 инициализироватьРедактор();
 try{решитьВсё();}catch(e){console.error("Автозапуск расчёта не удался:",e);}
+</script>
+<script>/* ===== Сворачивание разделов ==============================================
+   Каждая карточка (div.card) с заголовком h2 сворачивается ОТДЕЛЬНО, по клику
+   на сам заголовок. Кнопки «свернуть всё» здесь намеренно нет — сворачивается
+   только тот раздел, по которому кликнули. Состояние каждого раздела хранится
+   в localStorage по его заголовку, поэтому пересчёт («Решить всё») и
+   перезагрузка страницы состояние не сбрасывают.
+
+   При печати (Ctrl+P) все разделы раскрываются обратно — см. @media print в CSS.
+   ======================================================================== */
+(function(){
+ var КЛЮЧ="kp_свёрнутые_разделы";
+ function заголовки(){return Array.prototype.slice.call(document.querySelectorAll(".card > h2"));}
+ function имя(h){return (h.textContent||"").replace(/\s+/g," ").trim();}
+ function прочитать(){
+  try{return JSON.parse(localStorage.getItem(КЛЮЧ)||"{}")||{};}catch(e){return {};}
+ }
+ function запомнить(сост){
+  try{localStorage.setItem(КЛЮЧ,JSON.stringify(сост));}catch(e){}
+ }
+ function применить(сост){
+  заголовки().forEach(function(h){
+   var c=h.parentNode;
+   if(сост[имя(h)])c.classList.add("свёрнуто"); else c.classList.remove("свёрнуто");
+  });
+ }
+ заголовки().forEach(function(h,i){
+  h.classList.add("свёртываем");
+  h.setAttribute("title","Клик — свернуть или развернуть раздел");
+  h.setAttribute("role","button");
+  h.setAttribute("tabindex","0");
+  h.setAttribute("aria-expanded","true");
+  var переключить=function(){
+   var c=h.parentNode,свёрнуто=c.classList.toggle("свёрнуто");
+   h.setAttribute("aria-expanded",свёрнуто?"false":"true");
+   var сост=прочитать();                 // сохраняем по ИМЕНИ раздела
+   if(свёрнуто)сост[имя(h)]=1; else delete сост[имя(h)];
+   запомнить(сост);
+  };
+  h.addEventListener("click",переключить);
+  h.addEventListener("keydown",function(e){
+   if(e.key==="Enter"||e.key===" "){e.preventDefault();переключить();}
+  });
+ });
+ применить(прочитать());
+})();
 </script>
 </body></html>
