@@ -119,8 +119,8 @@ td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-c
 <pre id="out1"></pre>
 <div class="gfx" id="cvS"></div>
 <div class="gfx" id="cvФ"></div>
-<div class="gfx" id="cvX"></div><div class="gfx" id="cvDft"></div>
-<div class="gfx" id="cvRest"></div><div class="gfx" id="cvCmp"></div></div>
+<div class="gfx" id="cvX"></div><div class="gfx" id="cvDft"></div><div class="gfx" id="cvArg"></div>
+<div class="gfx" id="cvRest"></div><div class="gfx" id="cvОДПФ"></div><div class="gfx" id="cvCmp"></div></div>
 <div class="card"><h2>2. Часть 2А — прототип + ЦФ (п. 2.2)</h2>
 <button onclick="решитьЧ2А()">Решить только 2А</button>
 <label>Свои a0..aM <input id="inA" style="width:180px" placeholder="авто"></label>
@@ -150,6 +150,7 @@ function cE(a){var e=Math.exp(a.re);return C(e*Math.cos(a.im),e*Math.sin(a.im));
 // ДПФ/ОДПФ (прямо по ряду Фурье 3.4-3.7: Ck=1/N*Σx(n)e^(-j2πkn/N))
 function ДПФ(x){var N=x.length,R=[];for(var k=0;k<N;k++){var s=C(0,0);for(var n=0;n<N;n++){var f=-2*Math.PI*k*n/N;s=cA(s,cM(C(x[n],0),cE(C(0,f))));}R.push(cD(s,C(N,0)));}return R;}
 function ОДПФ(Ck){var N=Ck.length,R=[];for(var n=0;n<N;n++){var s=C(0,0);for(var k=0;k<N;k++){var f=2*Math.PI*k*n/N;s=cA(s,cM(Ck[k],cE(C(0,f))));}R.push(s.re);}return R;}
+function ОДПФк(Ck){var N=Ck.length,R=[];for(var n=0;n<N;n++){var s=C(0,0);for(var k=0;k<N;k++){var f=2*Math.PI*k*n/N;s=cA(s,cM(Ck[k],cE(C(0,f))));}R.push(s);}return R;}
 // Полиномы: коэфф. по возрастанию степени. value, mul, корни Дюрана-Кернера
 function pVal(p,z){var s=C(0,0),pw=C(1,0);for(var i=0;i<p.length;i++){s=cA(s,cM(C(p[i],0),pw));pw=cM(pw,z);}return s;}
 function pMul(a,b){var r=new Array(a.length+b.length-1).fill(0);for(var i=0;i<a.length;i++)for(var j=0;j<b.length;j++)r[i+j]+=a[i]*b[j];return r;}
@@ -350,6 +351,7 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  R1={S0:S0,wв:wв,перес:перес,Tд:Tд,wд:wд,x:x,Tc:Tc};
  var N=P.N,Ck=ДПФ(x.slice(0,N).concat(new Array(Math.max(0,N-x.length)).fill(0)));
  var xВос=ОДПФ(Ck);
+ var xВосC=ОДПФк(Ck);
   var s="Ч.1. Сигнал N1N2="+P.N1+P.N2+"; форма "+P.N1+", соотношения N2="+P.N2+" (t2="+((парамСиг().t2/P.t1).toFixed(2))+"t1, Tc="+((парамСиг().Tc/P.t1).toFixed(2))+"t1).\n";
   s+="S(0)="+(S0*1e6).toFixed(4)+" мкВ·с; max|S|="+(M*1e6).toFixed(4)+"; ωв(0,1)="+wв.toExponential(3)+" рад/с; Tд="+(Tд*1e6).toFixed(4)+" мкс; ωд="+wд.toExponential(3)+" рад/с.\n";
   s+="Порог 0,1·max (max берётся по |S|, а не по S(0)). Пересечения вниз: ["+перес.map(function(q){return (q/1e6).toFixed(4)+" МГц";}).join("; ")+"] -> omega_в = последнее.\n";
@@ -359,6 +361,13 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  s+="Спектр дискр.: Sд(ω)=Σx(n)e^-jωnTд, период ωд (3.18-3.20); z=e^jωTд.\n";
  s+="ДПФ Ck (N="+N+"): ["+Ck.map(function(c){return cAbs(c).toFixed(3)+"∠"+(cArg(c)*180/Math.PI).toFixed(0)+"°";}).join(", ")+"]\n";
  s+="ОДПФ→x: "+(xВос.slice(0,x.length).every(function(v,i){return Math.abs(v-x[i])<1e-9;})?"совпало с x(n) ✓":"ОШИБКА")+"\n";
+ // Контроль ОДПФ (п.2.1.5): мнимая часть и отклонение от исходной N-точечной последовательности
+ var x0N=x.slice(0,N).concat(new Array(Math.max(0,N-x.length)).fill(0));
+ var мИм=0,мОтк=0;
+ for(var iq=0;iq<N;iq++){var авс=xВосC[iq];
+  мИм=Math.max(мИм,Math.abs(авс.im));
+  мОтк=Math.max(мОтк,Math.abs(авс.re-x0N[iq]));}
+ s+="Контроль ОДПФ: max|Im x(n)| = "+мИм.toExponential(2)+"; max|x(n)−x_исх(n)| = "+мОтк.toExponential(2)+"\n";
  s+="Восстановление: ряд Фурье (3.7) по Ck; ряд Котельникова s(t)=Σx(n)Sa[ωд(t−nTд)/2]; совпадение только в точках отсчёта.\n";
  s+="Сравнение п.2.1.6: спектр дискр. = периодизация S(ω) с периодом ωд (эффект наложения); Ck ≈ отсчёты S(ω)/Tc.";
  document.getElementById("out1").textContent=s;
@@ -377,6 +386,10 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  var мCk=Ck.map(cAbs),ix=[];for(var q3=0;q3<N;q3++)ix.push(q3);
  plot("cvDft",{title:"Коэффициенты ДПФ |Ck|, N="+N,xlabel:"k  (номер гармоники)",ylabel:"|Ck|",h:250,
   series:[{label:"|Ck|",x:ix,y:мCk,type:"stem"}],ylim:[0,null]});
+ // Аргумент коэффициентов ДПФ (п.2.1.4): при |Ck|<1e-9 аргумент = 0, иначе это шум ±180°
+ var аCk=Ck.map(function(c){return cAbs(c)<1e-9?0:cArg(c)*180/Math.PI;});
+ plot("cvArg",{title:"Аргумент коэффициентов ДПФ arg Ck, N="+N,xlabel:"k  (номер гармоники)",ylabel:"arg Ck, град",h:250,
+  series:[{label:"arg Ck, °",x:ix,y:аCk,type:"stem"}],ylim:[-180,180]});
  // Восстановление (п.2.1.4-2.1.5): ряд Фурье по Ck и ряд Котельникова поверх исходного s(t)
  var Nt=300,tt=[],sИсх=[],sФур=[],sКот=[],tmax=1.15*Tc;
  for(var it=0;it<=Nt;it++){var t=it/Nt*tmax;tt.push(t*1e6);sИсх.push(s_аналог(t));
@@ -387,6 +400,11 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
           {label:"ряд Фурье по Ck",x:tt,y:sФур},
           {label:"ряд Котельникова",x:tt,y:sКот}],
   marks:[{x:Tд*1e6,label:"Tд"},{x:2*Tд*1e6,label:"2Tд"}]});
+ // Обратное ДПФ (п.2.1.5): восстановление x(n) именно ОДПФ из Ck (xВосC — комплексное)
+ var xОдпфN=[];for(var nn2=0;nn2<N;nn2++)xОдпфN.push(nn2);
+ var мОдпф=xВосC.map(function(c){return c.re;});
+ plot("cvОДПФ",{title:"Обратное ДПФ (п.2.1.5): восстановленные отсчёты x(n), N="+N,xlabel:"n",ylabel:"x(n), В",h:250,
+  series:[{label:"x(n) — ОДПФ из Ck",x:xОдпфN,y:мОдпф,type:"stem"}],ylim:[0,null]});
  // Сравнение спектров (п.2.1.6): |Sд(ω)| vs периодизация |S(ω)| с периодом ωд — наложение
  var wC=[],yC1=[],yC2=[],Nc2=240;
  for(var ic=0;ic<=Nc2;ic++){var wc=ic/Nc2*2*wд;wC.push(wc/1e6);

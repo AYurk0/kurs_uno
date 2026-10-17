@@ -17,10 +17,43 @@ const src=[
  dataN2.replace(/;\s*$/,''),
  pick('парамСиг'),pick('грань'),pick('амп'),pick('отрезкиСигнала'),pick('s_аналог'),
  pick('Fотрезка'),pick('Sчисл'),pick('S0площадь'),
- 'globalThis.__X={setP:function(a,b){P.N1=a;P.N2=b;P.t1=1;},Tc:парамСиг,mod:cAbs,S:Sчисл,S0:S0площадь};'
+ 'globalThis.__X={setP:function(a,b){P.N1=a;P.N2=b;P.t1=1;},Tc:парамСиг,mod:cAbs,S:Sчисл,S0:S0площадь,setE:function(e,t){P.E=e;P.t1=t;},get:function(){return {E:P.E,t1:P.t1};},sig:s_аналог};'
 ].join('\n');
 eval(src);
 const X=globalThis.__X;
+// --- блок 2: ДПФ/ОДПФ формы 7 при N=12 (вариант 7), значения из задания ---
+(function(){
+ const P7={E:1,t1:1e-6,N1:7,N2:1};
+ const saved=X.get();
+ X.setP(7,1);X.setE(P7.E,P7.t1);
+ eval(pick('ДПФ')+'\n'+pick('ОДПФ')+'\n'+pick('ОДПФк')+'\n'+
+  pick('C')+'\n'+pick('cArg')+'\n'+pick('cAbs')+'\n'+pick('cA')+'\n'+pick('cM')+'\n'+pick('cE')+'\n'+pick('cD')+'\n'+
+  'globalThis.__D={dft:ДПФ,idft:ОДПФ,idftk:ОДПФк,arg:cArg,abs:cAbs,tc:X.Tc,sig:X.sig};');
+ const D=globalThis.__D;
+ const q=D.tc(),Tc=q.Tc,Td=Math.PI/6.4765e6;
+ const x=[];for(let n=0;n<12;n++){const t=n*Td+Td*1e-9;x.push(t<Tc?D.sig(t):0);}
+ const Ck=D.dft(x);
+ const expArg=[0,-82.2,-167.3,86.7,-117.0,133.2,0];
+ const gotArg=Ck.slice(0,7).map(c=>D.abs(c)<1e-9?0:D.arg(c)*180/Math.PI);
+ console.log('\nПроверка arg Ck (форма 7, N=12):');
+ let fail=0;
+ for(let k=0;k<7;k++){
+  const ok=Math.abs(gotArg[k]-expArg[k])<0.15;
+  if(!ok)fail++;
+  console.log('  k='+k+': расч '+gotArg[k].toFixed(1)+' / ожид '+expArg[k].toFixed(1)+'  '+(ok?'ok':'ПРОВАЛ'));
+ }
+ const CkC=D.idftk(Ck);
+ const mIm=Math.max(...CkC.map(c=>Math.abs(c.im)));
+ console.log('Проверка ОДПФ (комплексное):');
+ console.log('  max|Im x| = '+mIm.toExponential(2)+(mIm<1e-9?' ok':' ПРОВАЛ'));if(mIm>=1e-9)fail++;
+ const expX=[0,0.485,0.970,1,1,0,0,0,0,0,0,0];
+ let mDt=0;
+ for(let n=0;n<12;n++)mDt=Math.max(mDt,Math.abs(CkC[n].re-expX[n]));
+ console.log('  max|x−ожид| = '+mDt.toExponential(2)+(mDt<0.015?' ok':' ПРОВАЛ'));if(mDt>=0.015)fail++;
+ X.setE(saved.E,saved.t1);
+ if(fail){console.log('Блок 2: провалов '+fail);process.exitCode=1;}
+ else console.log('Блок 2: все проверки пройдены');
+})();
 const EXP={1:[0,1.449,22.85,22],2:[2,2.000,16.27,16],3:[0,1.816,16.95,17],4:[2,2.000,2.75,3],
            5:[0,0.637,31.42,30],6:[1,1.000,19.24,19],7:[1.5,1.500,6.4765,7],
            8:[0.5,1.026,28.76,28],9:[-1,1.147,16.07,16]};
