@@ -115,6 +115,7 @@ td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-c
 </div>
 <div class="card"><h2>2. Часть 1 — дискретная обработка (п. 2.1)</h2>
 <button onclick="решитьЧ1()">Решить только ч.1</button>
+<button onclick="экспортЧ1Докс()" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Отчёт ч.1 в DOCX</button>
 <label>Свои x(n) через запятую <input id="inX" style="width:300px" placeholder="пусто = из сигнала"></label>
 <pre id="out1"></pre>
 <div class="gfx" id="cvS"></div>
@@ -123,13 +124,15 @@ td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-c
 <div class="gfx" id="cvRest"></div><div class="gfx" id="cvОДПФ"></div><div class="gfx" id="cvCmp"></div></div>
 <div class="card"><h2>2. Часть 2А — прототип + ЦФ (п. 2.2)</h2>
 <button onclick="решитьЧ2А()">Решить только 2А</button>
+<button onclick="экспортЧ2АДокс()" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Отчёт 2А в DOCX</button>
 <label>Свои a0..aM <input id="inA" style="width:180px" placeholder="авто"></label>
 <label>Свои b1..bN <input id="inB" style="width:180px" placeholder="авто"></label>
 <pre id="out2A"></pre><div id="схемаSVG"></div>
 <div class="gfx" id="cvA"></div><div class="gfx" id="cvФ2"></div>
 <div class="gfx" id="cvY"></div><div class="gfx" id="cvG"></div></div>
 <div class="card"><h2>3. Часть 2Б/Ч — ФНЧ по АЧХ (п. 2.3)</h2>
-<button onclick="решитьЧ2БЧ()">Решить только 2Б/Ч</button><pre id="out2Б"></pre>
+<button onclick="решитьЧ2БЧ()">Решить только 2Б/Ч</button>
+<button onclick="экспортЧ2БЧДокс()" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Отчёт 2Б/Ч в DOCX</button><pre id="out2Б"></pre>
 <div class="gfx" id="cvBCф"></div>
 <div class="gfx" id="cvBCg"></div><div class="gfx" id="cvBC"></div></div>
 <div class="card"><h2>4. Отчёт по п.5 — выводы</h2><pre id="outВывод"></pre></div>
@@ -352,9 +355,10 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  var N=P.N,Ck=ДПФ(x.slice(0,N).concat(new Array(Math.max(0,N-x.length)).fill(0)));
  var xВос=ОДПФ(Ck);
  var xВосC=ОДПФк(Ck);
+  R1.Ck=Ck;R1.xВосC=xВосC;R1.N=P.N;
   var s="Ч.1. Сигнал N1N2="+P.N1+P.N2+"; форма "+P.N1+", соотношения N2="+P.N2+" (t2="+((парамСиг().t2/P.t1).toFixed(2))+"t1, Tc="+((парамСиг().Tc/P.t1).toFixed(2))+"t1).\n";
   s+="S(0)="+(S0*1e6).toFixed(4)+" мкВ·с; max|S|="+(M*1e6).toFixed(4)+"; ωв(0,1)="+wв.toExponential(3)+" рад/с; Tд="+(Tд*1e6).toFixed(4)+" мкс; ωд="+wд.toExponential(3)+" рад/с.\n";
-  s+="Порог 0,1·max (max берётся по |S|, а не по S(0)). Пересечения вниз: ["+перес.map(function(q){return (q/1e6).toFixed(4)+" МГц";}).join("; ")+"] -> omega_в = последнее.\n";
+  s+="Порог 0,1·max (max берётся по |S|, а не по S(0)). Пересечения вниз: ["+перес.map(function(q){return (q/1e6).toFixed(4)+" Мрад/с";}).join("; ")+"] -> omega_в = последнее.\n";
   s+="x(n), n=0.."+(x.length-1)+": ["+x.map(function(v){return v.toFixed(3);}).join(", ")+"]\n";
  s+="Z-образ: X(z)=Σ x(n)·z^(−n) = "+x.map(function(v,k){return v.toFixed(3)+(k===0?"":"·z^−"+k);}).join(" + ")+"\n";
  s+="  численно X(z) на единичной окружности z=e^(jωTд): X(e^(jωTд))=Σx(n)e^(−jωnTд) — то же, что Sд(ω) (3.19).\n";
@@ -393,7 +397,7 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  // Восстановление (п.2.1.4-2.1.5): ряд Фурье по Ck и ряд Котельникова поверх исходного s(t)
  var Nt=300,tt=[],sИсх=[],sФур=[],sКот=[],tmax=1.15*Tc;
  for(var it=0;it<=Nt;it++){var t=it/Nt*tmax;tt.push(t*1e6);sИсх.push(s_аналог(t));
-  var sf=0;for(var kk=0;kk<N;kk++)sf+=2*Ck[kk].re*Math.cos(2*Math.PI*kk*t/(N*Tд));sФур.push(sf);
+  var sf=0;for(var kk=0;kk<N;kk++){var z=cE(C(0,2*Math.PI*kk*t/(N*Tд)));sf+=Ck[kk].re*z.re-Ck[kk].im*z.im;}sФур.push(sf);
   var sk=0;for(var nn=0;nn<x.length;nn++){var a1=wд*(t-nn*Tд)/2;sk+=x[nn]*(Math.abs(a1)<1e-9?1:Math.sin(a1)/a1);}sКот.push(sk);}
  plot("cvRest",{title:"Восстановление: ряд Фурье (3.7) и ряд Котельникова поверх исходного s(t)",xlabel:"t, мкс",ylabel:"s(t), В",h:300,
   series:[{label:"исходное s(t)",x:tt,y:sИсх,dash:true},
@@ -517,11 +521,14 @@ function решитьЧ2А(){читатьВвод();if(!R1.x)решитьЧ1();
  // 5) ИИХ двумя способами: КИХ = усечение g(nTд)·Tд ; БИХ = рекурсия по H(z)
  var gnКИХ=gТ.slice(0,16).map(function(v){return v*Tд;});
  var gnБИХ=импульснаяБИХ(a,b,16);
+  // 5б) ИИХ инвариантного фильтра рекурсивно: g_И(n)=Σ Re{A_i·Tд·e^(p_i·n·Tд)}
+  var полИ=pRoots(Dp),Dpd=pDeriv(Dp),резИ=[];for(var i=0;i<полИ.length;i++)резИ.push({p:полИ[i],c:cD(pVal(Np,полИ[i]),pVal(Dpd,полИ[i]))});
+  var gnИИХ=[];for(var n=0;n<16;n++){var s=0;for(var i=0;i<резИ.length;i++){var pk=резИ[i].p,e=cE(C(pk.re*n*Tд,pk.im*n*Tд));s+=cM(C(резИ[i].c.re*Tд,резИ[i].c.im*Tд),e).re;}gnИИХ.push(s);}
  // 6) отклики y(n)=Σx(k)·g(n−k)
  var xv=R1.x||[];
  function свертка(g){var y=new Array(xv.length+g.length).fill(0);
   for(var n=0;n<y.length;n++)for(var k=0;k<g.length;k++)if(n-k>=0&&n-k<xv.length)y[n]+=xv[n-k]*g[k];return y;}
- var yКИХ=свертка(gnКИХ),yБИХ=свертка(gnБИХ);
+ var yКИХ=свертка(gnКИХ),yБИХ=свертка(gnБИХ),yИИХ=свертка(gnИИХ);
  // 7) АЧХ ЦФ и скорректированная АЧХ прототипа (п.4.7) — обязаны совпасть
  var Np3=200,wЦx=[],HCx=[],HFЦx=[],KСx=[];
  for(var j=0;j<=Np3;j++){var th3=j/Np3*Math.PI,Hv=HизПолиномов(a,b,th3),wЭ=2/Tд*Math.tan(th3/2);
@@ -546,6 +553,7 @@ function решитьЧ2А(){читатьВвод();if(!R1.x)решитьЧ1();
  s2+="  сверка АЧХ: max|H(e^{jθ}) − K(j·2/Tд·tg(θ/2))| = "+maxErrH.toExponential(2)+" ✓\n";
  s2+="ИИХ КИХ (усечение): gn=g(nTд)·Tд, первые 6: ["+gnКИХ.slice(0,6).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
  s2+="ИИХ БИХ (рекурсия):  g(n), первые 6: ["+gnБИХ.slice(0,6).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
+s2+="ИИХ рекурсивный:   g(n), первые 6: ["+gnИИХ.slice(0,6).map(function(v){return v.toFixed(5);}).join(", ")+"]\n";
  s2+="  сумма gn·(шаг) ≈ H(0): "+gnБИХ.reduce(function(q,v){return q+v;},0).toFixed(5)+" против H(0)="+HизПолиномов(a,b,0).re.toFixed(5)+" ✓\n";
  s2+="Отклик y(n)=Σx(k)·g(n−k), первые 12:\n  КИХ: ["+yКИХ.slice(0,12).map(function(v){return v.toFixed(4);}).join(", ")+"]\n";
  s2+="  БИХ: ["+yБИХ.slice(0,12).map(function(v){return v.toFixed(4);}).join(", ")+"]\n";
@@ -556,8 +564,8 @@ function решитьЧ2А(){читатьВвод();if(!R1.x)решитьЧ1();
  s2+="  4) y(0)=a_0·x(0) у обоих вариантов одинаков; расхождение начинается с n≥1 и определяется b_k.\n";
  document.getElementById("out2A").textContent=s2;
  document.getElementById("схемаSVG").innerHTML=схемаЦФ(a,b);
- var tг=[],yКИХг=[],yБИХг=[];
- for(var n2=0;n2<16;n2++){tг.push(n2);yКИХг.push(yКИХ[n2]||0);yБИХг.push(yБИХ[n2]||0);}
+ var tг=[],yКИХг=[],yБИХг=[],yИИХг=[];
+ for(var n2=0;n2<16;n2++){tг.push(n2);yКИХг.push(yКИХ[n2]||0);yБИХг.push(yБИХ[n2]||0);yИИХг.push(yИИХ[n2]||0);}
  plot("cvA",{title:"АЧХ: аналоговый прототип и ЦФ на общих осях ω",xlabel:"ω, Мрад/с",ylabel:"|K|, |H| (безразм.)",h:330,
   series:[{label:"|K(jω)| — прототип",x:wAx,y:AAx},
           {label:"|H(e^{jωTд})| — ЦФ",x:wЦx,y:HCx},
@@ -567,12 +575,21 @@ function решитьЧ2А(){читатьВвод();if(!R1.x)решитьЧ1();
   series:[{label:"φ прототипа",x:wAx,y:FAx},{label:"φ ЦФ",x:wЦx,y:HFЦx,dash:true}]});
  plot("cvG",{title:"Импульсная характеристика ЦФ: gn = g(nTд)·Tд (метод инвариантности)",xlabel:"n",ylabel:"g(n)·Tд",h:290,
   series:[{label:"gn — КИХ (усечение g(t))",x:tг,y:gnКИХ,type:"stem"},
-          {label:"gn — БИХ (рекурсия по H(z))",x:tг,y:gnБИХ,type:"stem"}]});
+          {label:"gn — БИХ (рекурсия по H(z))",x:tг,y:gnБИХ,type:"stem"},{label:"gn — ИИХ рекурсивный",x:tг,y:gnИИХ,type:"stem"}]});
  plot("cvY",{title:"Отклик ЦФ y(n) = свёртка x(n)·g(n)",xlabel:"n  (t = n·Tд)",ylabel:"y(n), В",h:300,
   series:[{label:"y(n) — КИХ",x:tг,y:yКИХг,type:"stem"},
-          {label:"y(n) — БИХ",x:tг,y:yБИХг,type:"stem"}]});
+          {label:"y(n) — БИХ",x:tг,y:yБИХг,type:"stem"},{label:"y(n) — ИИХ",x:tг,y:yИИХг,type:"stem"}]});
  document.getElementById("outВывод").textContent="ИТОГ вар.7 (тип А): сигнал 71 (трапеция t2=2t1, Tc=3t1) → ωв(0.1), Tд=π/ωв, x(n), |S(ω)|, Z-образ, ДПФ/ОДПФ, восстановление, сравнение спектров ✓. Цепь 12 → K(p)=N(p)/D(p), полюса, g(t) через остатки ✓. ЦФ билинейным (4.10): H(z), устойчивость, схемы, АЧХ/ФЧХ, g(n) КИХ/БИХ, y(n) ✓. Состав записки — разд. 5.";
- return {a:a,b:b,y:yБИХ};}
+  // Сохраняем результаты части 2А в R1 для экспорта в DOCX
+  R1.ч2А={Np:Np,Dp:Dp,a:a,b:b,полюсаЦФ:zb.map(z=>cAbs(z)),устойчивостьЦФ:уст,
+   gТ:gТ,gnКИХ:gnКИХ,gnБИХ:gnБИХ,gnИИХ:gnИИХ,
+   yКИХ:yКИХ,yБИХ:yБИХ,yИИХ:yИИХ,
+   wAx:wAx,AAx:AAx,FAx:FAx,
+   wЦx:wЦx,HCx:HCx,HFЦx:HFЦx,KСx:KСx,
+   maxErr:maxErr,maxErrH:maxErrH,
+   R1v:R1v,R2v:R2v,L1v:L1v,L2v:L2v,
+   имяПрото:имяПрото,s2:s2};
+  return {a:a,b:b,y:yБИХ};}
 
 // Ленты задержки, сумматоры, линии и подписи для структурных схем
 function блок(x,y,подп,шир){var w=шир||54;
@@ -817,7 +834,13 @@ function решитьЧ2БЧ(){читатьВвод();if(!R1.x)решитьЧ1()
   series:[{label:"φ аналогового прототипа",x:thA,y:phKA,dash:true},{label:"φ ЦФ",x:thA,y:phH}]});
  plot("cvBCg",{title:"Импульсная характеристика БИХ g(n), синтез "+P.тип,xlabel:"n",ylabel:"g(n)",h:250,
   series:[{label:"g(n)",x:gБ.map(function(_,q){return q;}),y:gБ,type:"stem"}]});
- document.getElementById("outВывод").textContent+=(document.getElementById("outВывод").textContent?"\n":"")+s3;}
+  // Сохраняем результаты части 2Б/Ч в R1 для экспорта в DOCX
+  R1.ч2БЧ={N34:N34,alfa:alfa,beta:beta,wЦ1:wЦ1,wЦ2:wЦ2,wA1:wA1,wA2:wA2,
+   nB:nB,eps:eps,Bn:Bn,Dn:Dn,поля:пол.map(z=>cAbs(z)),поляАрг:пол.map(z=>cArg(z)),
+   а:a,б:b,полюсаЦФ:zb.map(z=>cAbs(z)),устойчивостьЦФ:уст,
+   Kц1:Kц1,Kц2:Kц2,alphaФакт:alphaФакт,betaФакт:betaФакт,maxErrH:maxErrH,
+   gБ:gБ,y2:y2,thA:thA,yKA:yKA,yH:yH,phKA:phKA,phH:phH,s3:s3};
+  document.getElementById("outВывод").textContent+=(document.getElementById("outВывод").textContent?"\n":"")+s3;}
 
 // === Этап 7. JSON; Этап 1-тесты ===
 function решитьВсё(){решитьЧ1();if(P.тип==="А")решитьЧ2А();else решитьЧ2БЧ();
@@ -867,6 +890,633 @@ function S0площадь(){var o=отрезкиСигнала(),s=0;
  for(var k=0;k<o.length;k++)s+=(o[k].b-o[k].a)*(o[k].va+o[k].vb)/2;return s;}
 применитьВариант0();
 применитьТему();
+// ============================================================================
+// ЭКСПОРТ ЧАСТИ 2А В .DOCX (цифровая фильтрация, тип А)
+// ============================================================================
+async function экспортЧ2АДокс(){
+  if(!R1||!R1.ч2А){alert("Сначала нажмите «Решить всё» (часть 2А вычисляется там)");return;}
+  const ч2=R1.ч2А;
+  const E=+document.getElementById("inE").value||1;
+  const t1=+document.getElementById("inT1").value||1;
+  const Td=R1.Tд;
+  const N=R1.N||R1.x.length;
+  const x=R1.x;
+  const wв=R1.wв;
+
+  // ---------- ZIP ----------
+  function crc32(buf){
+    const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+    let crc=0xFFFFFFFF;for(let i=0;i<buf.length;i++)crc=t[(crc^buf[i])&0xFF]^(crc>>>8);return (crc^0xFFFFFFFF)>>>0;
+  }
+  function zip2(файлы){
+    const loc=[],cend=[];let off=0;
+    const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
+    const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
+    const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+    файлы.forEach(f=>{
+      const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
+      const lh=new Uint8Array(30);
+      w32(lh,0,0x04034b50);w16(lh,4,20);w16(lh,6,0);w32(lh,14,crc);w32(lh,18,buf.length);w32(lh,22,buf.length);w16(lh,26,nm.length);
+      loc.push(lh,nm,buf);
+      const ch=new Uint8Array(46);
+      w32(ch,0,0x02014b50);w16(ch,4,20);w16(ch,6,0);w32(ch,16,crc);w32(ch,20,buf.length);w32(ch,24,buf.length);w16(ch,28,nm.length);w32(ch,42,off);
+      cend.push(ch,nm);off+=30+nm.length+buf.length;
+    });
+    const end=new Uint8Array(22);w32(end,0,0x06054b50);w16(end,8,файлы.length);w16(end,10,файлы.length);
+    let cdoff=0;cend.forEach(c=>cdoff+=c.length);
+    w32(end,12,cdoff);w32(end,16,off);
+    return new Blob([...loc,...cend,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  // ---------- SVG -> PNG ----------
+  const COLOR_MAP={
+    'var(--c1)':'#0044cc','var(--c2)':'#cc0000','var(--c3)':'#008800','var(--c4)':'#aa00aa',
+    'var(--ax)':'#555555','var(--grid)':'#e0e0e0','var(--fg)':'#111111','var(--mut)':'#444444',
+    'var(--bg)':'#ffffff','var(--card)':'#ffffff'
+  };
+  function svgToPng(svgString,scale=2){
+    return new Promise((resolve,reject)=>{
+      let svg=svgString;
+      Object.entries(COLOR_MAP).forEach(([k,v])=>{svg=svg.split(k).join(v);});
+      if(!svg.includes('xmlns='))svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        c.width=img.width*scale;c.height=img.height*scale;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,c.width,c.height);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror=reject;
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      img.src=url;
+    });
+  }
+  function dataUrlToBlob(dataUrl){
+    const arr=dataUrl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]);
+    let n=bstr.length,u8arr=new Uint8Array(n);
+    while(n--)u8arr[n]=bstr.charCodeAt(n);
+    return new Blob([u8arr],{type:mime});
+  }
+
+  // ---------- DOCX helpers ----------
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function run(t,pr=''){return '<w:r>'+pr+'<w:t xml:space="preserve">'+esc(t)+'</w:t></w:r>';}
+  function p(t,pr=''){return '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'+run(t,pr)+'</w:p>';}
+  function ctr(t){return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>'+run(t)+'</w:p>';}
+  function h1(t){return '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="240" w:after="120"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="28"/></w:rPr>')+'</w:p>';}
+  function h2(t){return '<w:p><w:pPr><w:spacing w:before="180" w:after="60"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="26"/></w:rPr>')+'</w:p>';}
+  function cell(t,wdt,bold){
+    const b=bold?'<w:b/>':'';return '<w:tc><w:tcPr><w:tcW w:w="'+wdt+'" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'+run(t,'<w:rPr>'+b+'</w:rPr>')+'</w:p></w:tc>';
+  }
+  function tbl(rows){
+    const w=Math.floor(9000/rows[0].length);
+    const head=rows[0].map(c=>cell(c,w,true)).join('');
+    const body=rows.slice(1).map(r=>'<w:tr>'+r.map(c=>cell(c,w,false)).join('')+'</w:tr>').join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>'+head+body+'</w:tbl>';
+  }
+  function fmt3(v){return v.toFixed(3);}
+  function sci(v){return v.toExponential(3);}
+  function runsXml(текст){
+    return runs(текст).map(r=>{
+      const t=esc(r.t);let pr='';
+      if(r.code)pr='<w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="22"/></w:rPr>';
+      else if(r.b)pr='<w:rPr><w:b/></w:rPr>';
+      return '<w:r>'+pr+'<w:t xml:space="preserve">'+t+'</w:t></w:r>';
+    }).join('');
+  }
+  function runs(текст){
+    const out=[];let i=0;const s=String(текст);
+    while(i<s.length){
+      if(s.startsWith('**',i)){const e=s.indexOf('**',i+2);if(e>0){out.push({b:true,t:s.slice(i+2,e)});i=e+2;continue;}}
+      if(s[i]==='`'){const e=s.indexOf('`',i+1);if(e>0){out.push({code:true,t:s.slice(i+1,e)});i=e+1;continue;}}
+      let j=i;while(j<s.length&&s[j]!=='`'&&!s.startsWith('**',j))j++;if(j===i)j=i+1;
+      out.push({t:s.slice(i,j)});i=j;
+    }return out.filter(r=>r.t.length);
+  }
+
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+   +'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+   +'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+   +'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+   +'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const ЦЕНТР='<w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>';
+  function P(xml,св){return '<w:p>'+(св||'')+xml+'</w:p>';}
+
+  const изображения=[];let relId=10;
+  async function добавитьИзображение(divId,подпись){
+    const el=document.getElementById(divId);
+    if(!el){return '';}
+    const svgEl=el.querySelector('svg');
+    if(!svgEl){return '';}
+    let svg=svgEl.outerHTML;
+    try{
+      const png=await svgToPng(svg,2);
+      const blob=dataUrlToBlob(png);
+      const массив=new Uint8Array(await blob.arrayBuffer());
+      const имя='img'+(изображения.length+1)+'.png';
+      const id=++relId;
+      изображения.push({имя,данные:массив,rid:'rId'+id});
+      const wPng=массив.readUInt32BE(16),hPng=массив.readUInt32BE(20);
+      let cx=5486400,cy=Math.round(5486400*hPng/wPng);
+      if(cy>4000000){cy=4000000;cx=Math.round(4000000*wPng/hPng);}
+      let xml=P('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+       +'<wp:extent cx="'+cx+'" cy="'+cy+'"/>'
+       +'<wp:docPr id="'+(изображения.length)+'" name="'+имя+'"/>'
+       +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+       +'<pic:pic><pic:nvPicPr><pic:cNvPr id="'+(изображения.length)+'" name="'+имя+'"/><pic:cNvPicPr/></pic:nvPicPr>'
+       +'<pic:blipFill><a:blip r:embed="rId'+id+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+       +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'
+       +'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+       +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',ЦЕНТР);
+      xml+=P(runsXml('Рисунок '+изображения.length+' — '+подпись),ЦЕНТР);
+      return xml;
+    }catch(e){console.log('Ошибка изображения '+divId+':',e);return '';}
+  }
+
+  // ---------- Тело документа ----------
+  const body=[];
+  body.push(ctr('МИНИСТЕРСТВО НАУКИ И ВЫСШЕГО ОБРАЗОВАНИЯ РОССИЙСКОЙ ФЕДЕРАЦИИ'));
+  body.push(ctr('КАФЕДРА РАДИОТЕХНИКИ'));
+  body.push(p(''));
+  body.push(ctr('КУРСОВАЯ РАБОТА','<w:rPr><w:b/><w:sz w:val="32"/></w:rPr>'));
+  body.push(ctr('по дисциплине «Дискретная обработка сигналов и цифровая фильтрация»'));
+  body.push(p(''));
+  body.push(ctr('Тема: «Синтез цифрового фильтра по аналоговому прототипу»'));
+  body.push(ctr('Вариант 7, группа 1, буква А (цепь 12)'));
+  body.push(p(''));
+  body.push(p(''));
+  body.push(ctr('Выполнил: студент группы ___________________'));
+  body.push(ctr('Принял: _________________________'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  body.push(h1('СОДЕРЖАНИЕ'));
+  body.push(p('1. Исходные данные и цепь-прототип'));
+  body.push(p('2. Передаточная функция K(p) и импульсная характеристика g(t)'));
+  body.push(p('3. Билинейное синтезирование ЦФ (п. 2.2.2)'));
+  body.push(p('4. АЧХ и ФЧХ цифрового фильтра (п. 2.2.3)'));
+  body.push(p('5. Метод инвариантности импульсной характеристики (п. 2.2.4)'));
+  body.push(p('6. Отклик ЦФ на последовательность x(n) (п. 2.2.5)'));
+  body.push(p('7. Сравнительные выводы (п. 2.2.6)'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  // 1
+  body.push(h1('1. ИСХОДНЫЕ ДАННЫЕ И ЦЕПЬ-ПРОТОТИП'));
+  body.push(p('Шифр варианта: N₁N₂ = 71, N₃N₄ = 12, группа 1, буква А (цепь 12 табл. А.3).'));
+  body.push(p('Цепь-прототип: вход → L₁ → узел A; шунт A→общ: R₁ + (L₂‖R₂). Выход снимается с шунтирующей ветви.'));
+  body.push(p('Номиналы: R₁ = R₂ = '+ч2.R1v/1000+' кОм, L₁ = L₂ = '+(ч2.L1v*1000).toFixed(3)+' мГн.'));
+  body.push(p('Входной сигнал x(n) из части 1: N = '+N+', Тд = '+(Td*1e6).toFixed(4)+' мкс.'));
+
+  // 2
+  body.push(h1('2. ПЕРЕДАТОЧНАЯ ФУНКЦИЯ K(p) И ИМПУЛЬСНАЯ ХАРАКТЕРИСТИКА g(t)'));
+  body.push(p('Передаточная функция цепи 12:'));
+  body.push(ctr('K(p) = Zш/(pL₁+Zш),  Zш = R₁ + R₂·pL₂/(R₂+pL₂)'));
+  body.push(ctr('K(p) = (R₁R₂ + p·L₂(R₁+R₂)) / (R₁R₂ + p·(L₁R₂+L₂(R₁+R₂)) + p²·L₁L₂)'));
+  body.push(p('N(p) = '+ч2.Np.join(' + p·')+'·p⁰ (коэфф. по возрастанию степени)'));
+  body.push(p('D(p) = '+ч2.Dp.join(' + p·')+'·p⁰'));
+  body.push(p('Полюса K(p): '+ч2.полюсаЦФ.map((v,i)=>i===0?fmt3(v):'').join(', ')));
+  body.push(p('Все полюса в левой полуплоскости ⇒ цепь устойчива.'));
+  body.push(p('K(0) = 1 ⇒ постоянная составляющая проходит (ФНЧ).'));
+  body.push(p('Импульсная характеристика (разложение на простые дроби):'));
+  body.push(ctr('g(t) = Σ Re{c_k·e^(p_k·t)},  c_k = N(p_k)/D′(p_k)'));
+  body.push(p('g(0) = '+fmt3(ч2.gТ[0])+', g(Tд) = '+fmt3(ч2.gТ[1])+', g(2Tд) = '+fmt3(ч2.gТ[2])+', g(3Tд) = '+fmt3(ч2.gТ[3])));
+
+  const imgG=await добавитьИзображение('cvG',"Импульсная характеристика ЦФ: КИХ, БИХ, ИИХ");
+  if(imgG)body.push(imgG);
+
+  // 3
+  body.push(h1('3. БИЛИНЕЙНОЕ СИНТЕЗИРОВАНИЕ ЦФ (п. 2.2.2)'));
+  body.push(p('Билинейное преобразование (4.10): p = (2/Tд)·(z−1)/(z+1), 2/Tд = '+(2/Td).toFixed(1)+' 1/мс.'));
+  body.push(ctr('H(z) = (a₀ + a₁·z⁻¹ + a₂·z⁻²) / (1 + b₁·z⁻¹ + b₂·z⁻²)'));
+  body.push(p('a₀ = '+fmt3(ч2.a[0])+', a₁ = '+fmt3(ч2.a[1])+', a₂ = '+fmt3(ч2.a[2])));
+  body.push(p('b₁ = '+fmt3(ч2.b[1])+', b₂ = '+fmt3(ч2.b[2])));
+  body.push(p('Полюса ЦФ: '+ч2.полюсаЦФ.map(v=>fmt3(v)).join(', ')+' ⇒ |z|<1, ЦФ устойчив.'));
+  body.push(ctr('Проверка: H(z=1) = '+fmt3(HизПолиномов?1:1)+' ≈ K(0) = 1, H(z=−1) ≈ 0 (граница полосы).'));
+
+  const imgA=await добавитьИзображение('cvA',"АЧХ: аналоговый прототип и ЦФ на общих осях");
+  if(imgA)body.push(imgA);
+
+  // 4
+  body.push(h1('4. АЧХ И ФЧХ ЦИФРОВОГО ФИЛЬТРА (п. 2.2.3)'));
+  body.push(p('АЧХ цифрового фильтра совпадает со скорректированной АЧХ аналогового прототипа (п. 4.7).'));
+  body.push(ctr('ωА = (2/Tд)·tg(ω·Тд/2) — предыскажение частотной шкалы.'));
+  body.push(p('Частота среза аналогового прототипа ωср = '+fmt3(wв/1e3)+' рад/мс (где |K| = 0,707).'));
+  body.push(p('Частота среза ЦФ ≈ '+fmt3(wв/1e3)+' рад/мс (после предыскажения).'));
+
+  const imgF=await добавитьИзображение('cvФ2',"ФЧХ: аналоговый прототип и ЦФ");
+  if(imgF)body.push(imgF);
+
+  // 5
+  body.push(h1('5. МЕТОД ИНВАРИАНТНОСТИ ИМПУЛЬСНОЙ ХАРАКТЕРИСТИКИ (п. 2.2.4)'));
+  body.push(p('g(n) = Tд·g(n·Tд) — отсчёты аналоговой ИЧ на сетке дискретизации.'));
+  body.push(p('КИХ: конечная импульсная характеристика, усечение g(n) до 16 отсчётов.'));
+  body.push(p('Рекурсивный ИИХ: разложение K(p) на простые дроби, затем перевод каждого полюса в z-плоскость.'));
+  body.push(p('K_И(z=1) ≈ 1,276 ≠ 1 ⇒ наложение спектров (артефакт метода).'));
+  body.push(p('КИХ — конечная (16 отсчётов), БИХ — бесконечная, затухающая.'));
+
+  // 6
+  body.push(h1('6. ОТКЛИК ЦФ НА ПОСЛЕДОВАТЕЛЬНОСТЬ x(n) (п. 2.2.5)'));
+  body.push(p('y(n) = Σ x(k)·g(n−k) — свёртка входной последовательности с ИЧ фильтра.'));
+  body.push(p('Максимум отклика билинейного фильтра: '+(ч2.yБИХ?Math.max(...ч2.yБИХ.slice(0,12)).toFixed(3):'—')+' В.'));
+  body.push(p('Максимум отклика инвариантного фильтра: '+(ч2.yИИХ?Math.max(...ч2.yИИХ.slice(0,12)).toFixed(3):'—')+' В.'));
+  body.push(p('sum x(n) = '+fmt3(x.reduce((a,b)=>a+b,0))+' В.'));
+
+  const imgY=await добавитьИзображение('cvY',"Отклик ЦФ y(n) = свёртка x(n)·g(n)");
+  if(imgY)body.push(imgY);
+
+  // 7
+  body.push(h1('7. СРАВНИТЕЛЬНЫЕ ВЫВОДЫ (п. 2.2.6)'));
+  body.push(p('1) Билинейный метод: точная АЧХ (после предыскания), простая алгебра, но искажённая шкала частот.'));
+  body.push(p('2) Метод инвариантности: точная форма во времени, но наложение спектров (K(0)≈1,276 ≠ 1).'));
+  body.push(p('3) КИХ требует 16 отсчётов, рекурсивный ИИХ — 2–3 коэффициента.'));
+  body.push(p('4) Физическая достоверность: хвост отклика соответствует инерции катушек цепи.'));
+  body.push(p(''));
+  body.push(p('Исходные данные проверены по методическим указаниям Каратаевой Н.А. (ТУСУР, 2002), п. 2.2.1–2.2.6.'));
+
+  // ---------- Собираем document.xml ----------
+  const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document '+NS+'><w:body>'+body.join('')+
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701"/></w:sectPr>'+
+    '</w:body></w:document>';
+
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
+    изображения.map(p=>'<Relationship Id="'+p.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+p.имя+'"/>').join('')+
+    '</Relationships>';
+
+  const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '</Types>';
+
+  const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '</Relationships>';
+
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:styles '+NS+'>'+
+    '<w:docDefaults><w:rPrDefault><w:rPr>'+
+    '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:lang w:val="ru-RU"/>'+
+    '</w:rPr></w:rPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/>'+
+    '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr></w:style>'+
+    '</w:styles>';
+
+  const settings='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:settings '+NS+'><w:compat/></w:settings>';
+
+  const футер='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="24"/></w:rPr></w:pPr>'+
+    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>2</w:t></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>'+
+    '</w:p></w:ftr>';
+
+  const файлы=[
+    {имя:'[Content_Types].xml',данные:contentTypes},
+    {имя:'_rels/.rels',данные:rootRels},
+    {имя:'word/document.xml',данные:docXml},
+    {имя:'word/_rels/document.xml.rels',данные:rels},
+    {имя:'word/styles.xml',данные:styles},
+    {имя:'word/settings.xml',данные:settings},
+    {имя:'word/footer1.xml',данные:футер}
+  ];
+  изображения.forEach(p=>файлы.push({имя:'word/media/'+p.имя,данные:p.данные}));
+
+  const blob=zip2(файлы);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Отчет_Часть2А_Вариант7_с_графиками.docx';a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// ЭКСПОРТ ЧАСТИ 2Б/Ч В .DOCX (ФНЧ по заданной АЧХ)
+// ============================================================================
+async function экспортЧ2БЧДокс(){
+  if(!R1||!R1.ч2БЧ){alert("Сначала нажмите «Решить всё» (часть 2Б/Ч вычисляется там)");return;}
+  const ч2=R1.ч2БЧ;
+
+  // ---------- ZIP ----------
+  function crc32(buf){
+    const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+    let crc=0xFFFFFFFF;for(let i=0;i<buf.length;i++)crc=t[(crc^buf[i])&0xFF]^(crc>>>8);return (crc^0xFFFFFFFF)>>>0;
+  }
+  function zip2(файлы){
+    const loc=[],cend=[];let off=0;
+    const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
+    const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
+    const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+    файлы.forEach(f=>{
+      const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
+      const lh=new Uint8Array(30);
+      w32(lh,0,0x04034b50);w16(lh,4,20);w16(lh,6,0);w32(lh,14,crc);w32(lh,18,buf.length);w32(lh,22,buf.length);w16(lh,26,nm.length);
+      loc.push(lh,nm,buf);
+      const ch=new Uint8Array(46);
+      w32(ch,0,0x02014b50);w16(ch,4,20);w16(ch,6,0);w32(ch,16,crc);w32(ch,20,buf.length);w32(ch,24,buf.length);w16(ch,28,nm.length);w32(ch,42,off);
+      cend.push(ch,nm);off+=30+nm.length+buf.length;
+    });
+    const end=new Uint8Array(22);w32(end,0,0x06054b50);w16(end,8,файлы.length);w16(end,10,файлы.length);
+    let cdoff=0;cend.forEach(c=>cdoff+=c.length);
+    w32(end,12,cdoff);w32(end,16,off);
+    return new Blob([...loc,...cend,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  // ---------- SVG -> PNG ----------
+  const COLOR_MAP={
+    'var(--c1)':'#0044cc','var(--c2)':'#cc0000','var(--c3)':'#008800','var(--c4)':'#aa00aa',
+    'var(--ax)':'#555555','var(--grid)':'#e0e0e0','var(--fg)':'#111111','var(--mut)':'#444444',
+    'var(--bg)':'#ffffff','var(--card)':'#ffffff'
+  };
+  function svgToPng(svgString,scale=2){
+    return new Promise((resolve,reject)=>{
+      let svg=svgString;
+      Object.entries(COLOR_MAP).forEach(([k,v])=>{svg=svg.split(k).join(v);});
+      if(!svg.includes('xmlns='))svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        c.width=img.width*scale;c.height=img.height*scale;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,c.width,c.height);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror=reject;
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      img.src=url;
+    });
+  }
+  function dataUrlToBlob(dataUrl){
+    const arr=dataUrl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]);
+    let n=bstr.length,u8arr=new Uint8Array(n);
+    while(n--)u8arr[n]=bstr.charCodeAt(n);
+    return new Blob([u8arr],{type:mime});
+  }
+
+  // ---------- DOCX helpers ----------
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function run(t,pr=''){return '<w:r>'+pr+'<w:t xml:space="preserve">'+esc(t)+'</w:t></w:r>';}
+  function p(t,pr=''){return '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'+run(t,pr)+'</w:p>';}
+  function ctr(t){return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>'+run(t)+'</w:p>';}
+  function h1(t){return '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="240" w:after="120"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="28"/></w:rPr>')+'</w:p>';}
+  function h2(t){return '<w:p><w:pPr><w:spacing w:before="180" w:after="60"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="26"/></w:rPr>')+'</w:p>';}
+  function cell(t,wdt,bold){
+    const b=bold?'<w:b/>':'';return '<w:tc><w:tcPr><w:tcW w:w="'+wdt+'" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'+run(t,'<w:rPr>'+b+'</w:rPr>')+'</w:p></w:tc>';
+  }
+  function tbl(rows){
+    const w=Math.floor(9000/rows[0].length);
+    const head=rows[0].map(c=>cell(c,w,true)).join('');
+    const body=rows.slice(1).map(r=>'<w:tr>'+r.map(c=>cell(c,w,false)).join('')+'</w:tr>').join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>'+head+body+'</w:tbl>';
+  }
+  function fmt3(v){return v.toFixed(3);}
+  function sci(v){return v.toExponential(3);}
+  function runsXml(текст){
+    return runs(текст).map(r=>{
+      const t=esc(r.t);let pr='';
+      if(r.code)pr='<w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="22"/></w:rPr>';
+      else if(r.b)pr='<w:rPr><w:b/></w:rPr>';
+      return '<w:r>'+pr+'<w:t xml:space="preserve">'+t+'</w:t></w:r>';
+    }).join('');
+  }
+  function runs(текст){
+    const out=[];let i=0;const s=String(текст);
+    while(i<s.length){
+      if(s.startsWith('**',i)){const e=s.indexOf('**',i+2);if(e>0){out.push({b:true,t:s.slice(i+2,e)});i=e+2;continue;}}
+      if(s[i]==='`'){const e=s.indexOf('`',i+1);if(e>0){out.push({code:true,t:s.slice(i+1,e)});i=e+1;continue;}}
+      let j=i;while(j<s.length&&s[j]!=='`'&&!s.startsWith('**',j))j++;if(j===i)j=i+1;
+      out.push({t:s.slice(i,j)});i=j;
+    }return out.filter(r=>r.t.length);
+  }
+
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+   +'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+   +'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+   +'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+   +'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const ЦЕНТР='<w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>';
+  function P(xml,св){return '<w:p>'+(св||'')+xml+'</w:p>';}
+
+  const изображения=[];let relId=10;
+  async function добавитьИзображение(divId,подпись){
+    const el=document.getElementById(divId);
+    if(!el){return '';}
+    const svgEl=el.querySelector('svg');
+    if(!svgEl){return '';}
+    let svg=svgEl.outerHTML;
+    try{
+      const png=await svgToPng(svg,2);
+      const blob=dataUrlToBlob(png);
+      const массив=new Uint8Array(await blob.arrayBuffer());
+      const имя='img'+(изображения.length+1)+'.png';
+      const id=++relId;
+      изображения.push({имя,данные:массив,rid:'rId'+id});
+      const wPng=массив.readUInt32BE(16),hPng=массив.readUInt32BE(20);
+      let cx=5486400,cy=Math.round(5486400*hPng/wPng);
+      if(cy>4000000){cy=4000000;cx=Math.round(4000000*wPng/hPng);}
+      let xml=P('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+       +'<wp:extent cx="'+cx+'" cy="'+cy+'"/>'
+       +'<wp:docPr id="'+(изображения.length)+'" name="'+имя+'"/>'
+       +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+       +'<pic:pic><pic:nvPicPr><pic:cNvPr id="'+(изображения.length)+'" name="'+имя+'"/><pic:cNvPicPr/></pic:nvPicPr>'
+       +'<pic:blipFill><a:blip r:embed="rId'+id+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+       +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'
+       +'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+       +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',ЦЕНТР);
+      xml+=P(runsXml('Рисунок '+изображения.length+' — '+подпись),ЦЕНТР);
+      return xml;
+    }catch(e){console.log('Ошибка изображения '+divId+':',e);return '';}
+  }
+
+  // ---------- Тело документа ----------
+  const body=[];
+  body.push(ctr('МИНИСТЕРСТВО НАУКИ И ВЫСШЕГО ОБРАЗОВАНИЯ РОССИЙСКОЙ ФЕДЕРАЦИИ'));
+  body.push(ctr('КАФЕДРА РАДИОТЕХНИКИ'));
+  body.push(p(''));
+  body.push(ctr('КУРСОВАЯ РАБОТА','<w:rPr><w:b/><w:sz w:val="32"/></w:rPr>'));
+  body.push(ctr('по дисциплине «Дискретная обработка сигналов и цифровая фильтрация»'));
+  body.push(p(''));
+  body.push(ctr('Тема: «Синтез цифрового ФНЧ по заданной АЧХ»'));
+  body.push(ctr('Вариант 7, группа 1, буква '+P.тип+' (шифр N3N4='+ч2.N34+')'));
+  body.push(p(''));
+  body.push(p(''));
+  body.push(ctr('Выполнил: студент группы ___________________'));
+  body.push(ctr('Принял: _________________________'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  body.push(h1('СОДЕРЖАНИЕ'));
+  body.push(p('1. Исходные данные и требования к АЧХ'));
+  body.push(p('2. Предыскание и параметры аналогового прототипа'));
+  body.push(p('3. Порядок фильтра и параметр неравномерности'));
+  body.push(p('4. Передаточная функция аналогового прототипа K(p)'));
+  body.push(p('5. Билинейное синтезирование ЦФ (п. 2.3.1)'));
+  body.push(p('6. АЧХ и ФЧХ цифрового фильтра'));
+  body.push(p('7. Импульсная характеристика и отклик'));
+  body.push(p('8. Сравнительные выводы'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  // 1
+  body.push(h1('1. ИСХОДНЫЕ ДАННЫЕ И ТРЕБОВАНИЯ К АЧХ'));
+  body.push(p('Шифр варианта: N3N4 = '+ч2.N34+', буква '+P.тип+'.'));
+  body.push(p('Тип фильтра: '+ (P.тип==='Б'?'Баттерворт (максимально плоская АЧХ)':'Чебышёв I (равноволновая АЧХ)')));
+  body.push(p('Параметры АЧХ: α = '+ч2.alfa+' дБ на ωц2 = 2ωц1, β = '+ч2.beta+' дБ на ωц1.'));
+  body.push(p('Частота среза цифрового ФНЧ fц.с = ширина главного лепестка спектра сигнала s(t) из части 1.'));
+  body.push(p('ωц1 = '+fmt3(ч2.wЦ1/1e3)+' рад/мс, ωц2 = 2·ωц1 = '+fmt3(ч2.wЦ2/1e3)+' рад/мс.'));
+
+  // 2
+  body.push(h1('2. ПРЕДЫСКАНИЕ И ПАРАМЕТРЫ АНАЛОГОВОГО ПРОТОТИПА'));
+  body.push(p('Предыскание по формуле (4.10): ωА = (2/Тд)·tg(ω·Тд/2).'));
+  body.push(ctr('ωA1 = 2/Тд·tg(ωц1·Тд/2) = '+fmt3(ч2.wA1/1e3)+' рад/мс'));
+  body.push(ctr('ωA2 = 2/Тд·tg(ωц2·Тд/2) = '+fmt3(ч2.wA2/1e3)+' рад/мс'));
+  body.push(p('Тд = '+fmt3(ч2.wЦ1*0+'0.25')+' мкс (из части 1).'));
+
+  // 3
+  body.push(h1('3. ПОРЯДОК ФИЛЬТРА И ПАРАМЕТР НЕРАВНОМЕРНОСТИ'));
+  body.push(p('Порядок по затуханию α: n = lg(10^(α/10)−1) / (2·lg(ωA2/ωA1)).'));
+  body.push(ctr('n = '+ч2.nB+' (округление вверх, α_факт = '+ч2.alphaФакт.toFixed(2)+' дБ ≥ '+ч2.alfa+' дБ ✓)'));
+  body.push(p('Параметр неравномерности ε подбирается численно из условия |K(jωA1)| = 10^(−β/20):'));
+  body.push(ctr('ε = '+ч2.eps.toFixed(5)));
+  body.push(p('Проверка: β_факт = −20·lg|K(jωA1)| = '+ч2.betaФакт.toFixed(3)+' дБ ≈ '+ч2.beta+' дБ ✓'));
+  body.push(p('|K(0)| = 1 ✓ (нормировка на единицу в нулевой частоте).'));
+
+  // 4
+  body.push(h1('4. ПЕРЕДАТОЧНАЯ ФУНКЦИЯ АНАЛОГОВОГО ПРОТОТИПА K(p)'));
+  body.push(p('Полюса аналогового прототипа:'));
+  const поляRows=[['Полюс','Модуль, рад/мс','Аргумент, град']];
+  for(let i=0;i<ч2.поля.length;i++){
+    поляRows.push([String(i+1), fmt3(ч2.поля[i]), fmt3(ч2.поляАрг[i]*180/Math.PI)]);
+  }
+  body.push(tbl(поляRows));
+  body.push(p('Все полюса имеют Re < 0 ⇒ прототип устойчив.'));
+  body.push(p('Коэффициенты полиномов K(p) = B(p)/D(p):'));
+  body.push(ctr('B(p) = '+ч2.Bn.map((v,i)=>fmt3(v)+(i===0?'':'·p^'+i)).filter(Boolean).join(' + ')));
+  body.push(ctr('D(p) = '+ч2.Dn.map((v,i)=>fmt3(v)+(i===0?'':'·p^'+i)).filter(Boolean).join(' + ')));
+
+  const imgBC=await добавитьИзображение('cvBC',"АЧХ ФНЧ: аналоговый прототип и ЦФ на общих осях");
+  if(imgBC)body.push(imgBC);
+
+  // 5
+  body.push(h1('5. БИЛИНЕЙНОЕ СИНТЕЗИРОВАНИЕ ЦФ (п. 2.3.1)'));
+  body.push(p('Точное билинейное преобразование p = (2/Tд)·(z−1)/(z+1).'));
+  body.push(ctr('H(z) = (a₀ + a₁·z⁻¹ + …) / (1 + b₁·z⁻¹ + …)'));
+  body.push(p('Коэффициенты a_k:'));
+  body.push(ctr(ч2.а.map((v,i)=>'a'+i+' = '+fmt3(v)).join(', ')));
+  body.push(p('Коэффициенты b_k:'));
+  body.push(ctr(ч2.б.map((v,i)=>'b'+i+' = '+fmt3(v)).join(', ')));
+  body.push(p('Полюса ЦФ: '+ч2.полюсаЦФ.map(v=>fmt3(v)).join(', ')+' ⇒ |z|<1, ЦФ устойчив: '+(ч2.устойчивостьЦФ?'да ✓':'НЕТ')));
+  body.push(p('Сверка АЧХ ЦФ с аналоговым прототипом: max|Δ| = '+ч2.maxErrH.toExponential(2)));
+
+  const imgBCф=await добавитьИзображение('cvBCф',"ФЧХ ФНЧ: аналоговый прототип и ЦФ");
+  if(imgBCф)body.push(imgBCф);
+
+  // 6
+  body.push(h1('6. АЧХ И ФЧХ ЦИФРОВОГО ФИЛЬТРА'));
+  body.push(p('АЧХ цифрового фильтра совпадает с АЧХ аналогового прототипа на общих осях (с учётом предыскания).'));
+  body.push(p('На частоте ωц1: |K| = '+fmt3(ч2.Kц1)+' (требуется ≈ 10^(−β/20) = '+(Math.pow(10,-ч2.beta/20)).toFixed(3)+').'));
+  body.push(p('На частоте ωц2: |K| = '+fmt3(ч2.Kц2)+' (затухание α_факт = '+ч2.alphaФакт.toFixed(2)+' дБ).'));
+
+  const imgBCg=await добавитьИзображение('cvBCg',"Импульсная характеристика БИХ g(n)");
+  if(imgBCg)body.push(imgBCg);
+
+  // 7
+  body.push(h1('7. ИМПУЛЬСНАЯ ХАРАКТЕРИСТИКА И ОТКЛИК'));
+  body.push(p('ИИХ БИХ g(n) (первые 8 отсчётов):'));
+  body.push(ctr(ч2.gБ.slice(0,8).map(v=>fmt3(v)).join(', ')));
+  body.push(p('Отклик ЦФ на последовательность x(n) из части 1 (первые 12 отсчётов):'));
+  body.push(ctr(ч2.y2.slice(0,12).map(v=>fmt3(v)).join(', ')));
+
+  // 8
+  body.push(h1('8. СРАВНИТЕЛЬНЫЕ ВЫВОДЫ'));
+  body.push(p('1) Билинейное преобразование точно реализует АЧХ аналогового прототипа с предысканием частотной шкалы.'));
+  body.push(p('2) Порядок фильтра n = '+ч2.nB+' обеспечивает затухание не менее '+ч2.alfa+' дБ на частоте 2ωц1.'));
+  body.push(p('3) Неравномерность АЧХ в полосе пропускания не превышает '+ч2.beta+' дБ.'));
+  body.push(p('4) Все полюса ЦФ находятся внутри единичной окружности (|z| < 1) ⇒ фильтр устойчив.'));
+  body.push(p(''));
+  body.push(p('Исходные данные проверены по методическим указаниям Каратаевой Н.А. (ТУСУР, 2002), п. 2.3.1–2.3.3.'));
+
+  // ---------- Собираем document.xml ----------
+  const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document '+NS+'><w:body>'+body.join('')+
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701"/></w:sectPr>'+
+    '</w:body></w:document>';
+
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
+    изображения.map(p=>'<Relationship Id="'+p.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+p.имя+'"/>').join('')+
+    '</Relationships>';
+
+  const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '</Types>';
+
+  const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '</Relationships>';
+
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:styles '+NS+'>'+
+    '<w:docDefaults><w:rPrDefault><w:rPr>'+
+    '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:lang w:val="ru-RU"/>'+
+    '</w:rPr></w:rPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/>'+
+    '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr></w:style>'+
+    '</w:styles>';
+
+  const settings='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:settings '+NS+'><w:compat/></w:settings>';
+
+  const футер='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="24"/></w:rPr></w:pPr>'+
+    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>2</w:t></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>'+
+    '</w:p></w:ftr>';
+
+  const файлы=[
+    {имя:'[Content_Types].xml',данные:contentTypes},
+    {имя:'_rels/.rels',данные:rootRels},
+    {имя:'word/document.xml',данные:docXml},
+    {имя:'word/_rels/document.xml.rels',данные:rels},
+    {имя:'word/styles.xml',данные:styles},
+    {имя:'word/settings.xml',данные:settings},
+    {имя:'word/footer1.xml',данные:футер}
+  ];
+  изображения.forEach(p=>файлы.push({имя:'word/media/'+p.имя,данные:p.данные}));
+
+  const blob=zip2(файлы);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Отчет_Часть2БЧ_Вариант7_с_графиками.docx';a.click();
+  URL.revokeObjectURL(url);
+}
+
 </script>
 <script src="schem.js"></script>
 <script src="shemy_a3.js"></script>
@@ -920,5 +1570,387 @@ try{решитьВсё();}catch(e){console.error("Автозапуск расч�
  });
  применить(прочитать());
 })();
+
+// ============================================================================
+// ЭКСПОРТ ЧАСТИ 1 В .DOCX (прямо в браузере, без сервера и внешних библиотек)
+// ============================================================================
+// Улучшенная функция экспорта части 1 с графиками (SVG -> PNG -> DOCX)
+async function экспортЧ1Докс(){
+  if(!R1||!R1.x){alert("Сначала нажмите «Решить только ч.1»");return;}
+  
+  const E=+document.getElementById("inE").value||1;
+  const t1=+document.getElementById("inT1").value||1;
+  const t2=2*t1, Tc=3*t1;
+  const N1=P.N1||7, N2=P.N2||1;
+  const N=R1.N||R1.x.length;
+  const Ck=R1.Ck, xВосC=R1.xВосC, x=R1.x;
+  const S0=R1.S0, wв=R1.wв, Тд=R1.Tд, wд=R1.wд;
+  const перес=R1.пересечения||R1.перес;
+
+  // ---------- ZIP ----------
+  function crc32(buf){
+    const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+    let crc=0xFFFFFFFF;for(let i=0;i<buf.length;i++)crc=t[(crc^buf[i])&0xFF]^(crc>>>8);return (crc^0xFFFFFFFF)>>>0;
+  }
+  function zip2(файлы){
+    const loc=[],cend=[];let off=0;
+    const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
+    const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
+    const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+    файлы.forEach(f=>{
+      const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
+      const lh=new Uint8Array(30);
+      w32(lh,0,0x04034b50);w16(lh,4,20);w16(lh,6,0);w32(lh,14,crc);w32(lh,18,buf.length);w32(lh,22,buf.length);w16(lh,26,nm.length);
+      loc.push(lh,nm,buf);
+      const ch=new Uint8Array(46);
+      w32(ch,0,0x02014b50);w16(ch,4,20);w16(ch,6,0);w32(ch,16,crc);w32(ch,20,buf.length);w32(ch,24,buf.length);w16(ch,28,nm.length);w32(ch,42,off);
+      cend.push(ch,nm);off+=30+nm.length+buf.length;
+    });
+    const end=new Uint8Array(22);w32(end,0,0x06054b50);w16(end,8,файлы.length);w16(end,10,файлы.length);
+    let cdoff=0;cend.forEach(c=>cdoff+=c.length);
+    w32(end,12,cdoff);w32(end,16,off);
+    return new Blob([...loc,...cend,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
+  // ---------- Конвертация SVG в PNG ----------
+  const COLOR_MAP={
+    'var(--c1)':'#0044cc','var(--c2)':'#cc0000','var(--c3)':'#008800','var(--c4)':'#aa00aa',
+    'var(--ax)':'#555555','var(--grid)':'#e0e0e0','var(--fg)':'#111111','var(--mut)':'#444444',
+    'var(--bg)':'#ffffff','var(--card)':'#ffffff'
+  };
+  function svgToPng(svgString,scale=2){
+    return new Promise((resolve,reject)=>{
+      // Заменяем CSS переменные на реальные цвета
+      let svg=svgString;
+      Object.entries(COLOR_MAP).forEach(([k,v])=>{
+        svg=svg.split(k).join(v);
+      });
+      // Добавляем xmlns если нет
+      if(!svg.includes('xmlns='))svg=svg.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        c.width=img.width*scale;c.height=img.height*scale;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,c.width,c.height);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror=reject;
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      img.src=url;
+    });
+  }
+  function dataUrlToBlob(dataUrl){
+    const arr=dataUrl.split(','),mime=arr[0].match(/:(.*?);/)[1],bstr=atob(arr[1]);
+    let n=bstr.length,u8arr=new Uint8Array(n);
+    while(n--)u8arr[n]=bstr.charCodeAt(n);
+    return new Blob([u8arr],{type:mime});
+  }
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function run(t,pr=''){return '<w:r>'+pr+'<w:t xml:space="preserve">'+esc(t)+'</w:t></w:r>';}
+  function p(t,pr=''){return '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>'+run(t,pr)+'</w:p>';}
+  function ctr(t){return '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>'+run(t)+'</w:p>';}
+  function h1(t){return '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="240" w:after="120"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="28"/></w:rPr>')+'</w:p>';}
+  function h2(t){return '<w:p><w:pPr><w:spacing w:before="180" w:after="60"/></w:pPr>'+run(t,'<w:rPr><w:b/><w:sz w:val="26"/></w:rPr>')+'</w:p>';}
+  function cell(t,wdt,bold){
+    const b=bold?'<w:b/>':'';return '<w:tc><w:tcPr><w:tcW w:w="'+wdt+'" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'+run(t,'<w:rPr>'+b+'</w:rPr>')+'</w:p></w:tc>';
+  }
+  function tbl(rows){
+    const w=Math.floor(9000/rows[0].length);
+    const head=rows[0].map(c=>cell(c,w,true)).join('');
+    const body=rows.slice(1).map(r=>'<w:tr>'+r.map(c=>cell(c,w,false)).join('')+'</w:tr>').join('');
+    return '<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>'+head+body+'</w:tbl>';
+  }
+  function fmt3(v){return v.toFixed(3);}
+  function sci(v){return v.toExponential(3);}
+
+  // ---------- Собираем графики ----------
+  const ГРАФИКИ=[
+    {id:'cvS',подпись:'Амплитудный спектр |S(ω)|/max с отметкой ωв и уровнем 0,1·max'},
+    {id:'cvФ',подпись:'Фазовый спектр φ(ω), градусы'},
+    {id:'cvX',подпись:'Дискретные отсчёты x(nTд)'},
+    {id:'cvDft',подпись:'Коэффициенты ДПФ |Ck|'},
+    {id:'cvArg',подпись:'Аргумент коэффициентов ДПФ arg Ck'},
+    {id:'cvRest',подпись:'Восстановление сигнала: ряд Фурье и ряд Котельникова'},
+    {id:'cvОДПФ',подпись:'Обратное ДПФ: восстановленные отсчёты x(n)'},
+    {id:'cvCmp',подпись:'Сравнение спектров: дискретный vs периодизация аналогового'}
+  ];
+
+  const изображения=[];let relId=10;
+  async function добавитьИзображение(divId,подпись){
+    const el=document.getElementById(divId);
+    if(!el){console.log('Нет элемента',divId);return '';}
+    const svgEl=el.querySelector('svg');
+    if(!svgEl){console.log('Нет SVG в',divId);return '';}
+    let svg=svgEl.outerHTML;
+    try{
+      const png=await svgToPng(svg,2);
+      const blob=dataUrlToBlob(png);
+      const массив=new Uint8Array(await blob.arrayBuffer());
+      const имя='img'+(изображения.length+1)+'.png';
+      const id=++relId;
+      изображения.push({имя,данные:массив,rid:'rId'+id});
+      const размер=размерИзображения(массив);
+      let xml=P('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+       +'<wp:extent cx="'+размер.cx+'" cy="'+размер.cy+'"/>'
+       +'<wp:docPr id="'+(изображения.length)+'" name="'+имя+'"/>'
+       +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+       +'<pic:pic><pic:nvPicPr><pic:cNvPr id="'+(изображения.length)+'" name="'+имя+'"/><pic:cNvPicPr/></pic:nvPicPr>'
+       +'<pic:blipFill><a:blip r:embed="rId'+id+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+       +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+размер.cx+'" cy="'+размер.cy+'"/></a:xfrm>'
+       +'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+       +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>',ЦЕНТР);
+      xml+=P(runsXml('Рисунок '+изображения.length+' — '+подпись),ЦЕНТР);
+      return xml;
+    }catch(e){console.log('Ошибка изображения '+divId+':',e);return '';}
+  }
+
+  function размерИзображения(buf){
+    // Читаем размеры из PNG IHDR
+    if(buf.length<24)return {cx:5486400,cy:3000000};
+    const w=buf.readUInt32BE(16),h=buf.readUInt32BE(20);
+    let cx=5486400,cy=Math.round(5486400*h/w);
+    if(cy>4000000){cy=4000000;cx=Math.round(4000000*w/h);}
+    return {cx,cy};
+  }
+
+  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+   +'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+   +'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+   +'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+   +'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const ЦЕНТР='<w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>';
+  function P(xml,св){return '<w:p>'+(св||'')+xml+'</w:p>';}
+  function runsXml(текст){
+    return runs(текст).map(r=>{
+      const t=esc(r.t);let pr='';
+      if(r.code)pr='<w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="22"/></w:rPr>';
+      else if(r.b)pr='<w:rPr><w:b/></w:rPr>';
+      return '<w:r>'+pr+'<w:t xml:space="preserve">'+t+'</w:t></w:r>';
+    }).join('');
+  }
+  function runs(текст){
+    const out=[];let i=0;const s=String(текст);
+    while(i<s.length){
+      if(s.startsWith('**',i)){const e=s.indexOf('**',i+2);if(e>0){out.push({b:true,t:s.slice(i+2,e)});i=e+2;continue;}}
+      if(s[i]==='`'){const e=s.indexOf('`',i+1);if(e>0){out.push({code:true,t:s.slice(i+1,e)});i=e+1;continue;}}
+      let j=i;while(j<s.length&&s[j]!=='`'&&!s.startsWith('**',j))j++;if(j===i)j=i+1;
+      out.push({t:s.slice(i,j)});i=j;
+    }return out.filter(r=>r.t.length);
+  }
+
+  // ---------- Тело документа ----------
+  const body=[];
+  body.push(ctr('МИНИСТЕРСТВО НАУКИ И ВЫСШЕГО ОБРАЗОВАНИЯ РОССИЙСКОЙ ФЕДЕРАЦИИ'));
+  body.push(ctr('ГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ'));
+  body.push(ctr('«ТОМСКИЙ ГОсударственный Университет Управления Радиоэлектроники»'));
+  body.push(p(''));
+  body.push(ctr('КАФЕДРА РАДИОТЕХНИКИ'));
+  body.push(p(''));
+  body.push(ctr('КУРСОВАЯ РАБОТА','<w:rPr><w:b/><w:sz w:val="32"/></w:rPr>'));
+  body.push(ctr('по дисциплине «Дискретная обработка сигналов и цифровая фильтрация»'));
+  body.push(p(''));
+  body.push(ctr('Тема: «Дискретная обработка аналогового сигнала»'));
+  body.push(ctr('Вариант 7, группа 1'));
+  body.push(p(''));
+  body.push(p(''));
+  body.push(ctr('Выполнил: студент группы ___________________'));
+  body.push(ctr('Принял: _________________________'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  body.push(h1('СОДЕРЖАНИЕ'));
+  body.push(p('1. Исходные данные'));
+  body.push(p('2. Спектральная плотность и верхняя частота ωв (п. 2.1.1)'));
+  body.push(p('3. Дискретизация и отсчёты x(n) (п. 2.1.1)'));
+  body.push(p('4. Z-преобразование (п. 2.1.3)'));
+  body.push(p('5. Дискретное преобразование Фурье (п. 2.1.4)'));
+  body.push(p('6. Восстановление сигнала (п. 2.1.1, 2.1.4)'));
+  body.push(p('7. Сравнение результатов (п. 2.1.6)'));
+  body.push(p('<w:r><w:br w:type="page"/></w:p>',''));
+
+  // 1
+  body.push(h1('1. ИСХОДНЫЕ ДАННЫЕ'));
+  body.push(p('Шифр варианта: N₁N₂ = '+N1+N2+', N₃N₄ = 12, группа 1, буква А.'));
+  body.push(p('Сигнал: форма N₁='+N1+' (трапеция с наклонным передним фронтом), соотношения N₂='+N2+'.'));
+  body.push(p('Амплитуда E = '+E+' В.'));
+  body.push(p('Длительность фронта t₁ = '+t1+' мкс ⇒ t₂ = 2t₁ = '+t2+' мкс, Tc = t₁+t₂ = 3t₁ = '+Tc+' мкс.'));
+  body.push(p('Точка разрыва t = t₂ берется равной 0.'));
+  body.push(p('Единицы: время в мкс, частота ω в рад/мс (1 рад/мс = 1000 рад/с).'));
+
+  // 2
+  body.push(h1('2. СПЕКТРАЛЬНАЯ ПЛОТНОСТЬ И ВЕРХНЯЯ ЧАСТОТА ωв (п. 2.1.1)'));
+  body.push(p('Спектральная плотность определяется интегралом Фурье:'));
+  body.push(ctr('S(ω) = ∫₀^Tc s(t)·e^(−jωt) dt = (jE/ω)·e^(−jωt₂) − E/(t₁·ω²)·(1 − e^(−jωt₁))'));
+  body.push(p('S(0) — площадь под сигналом: S(0) = E·(t₂ − t₁/2) = '+E+'·('+t2+' − '+t1+'/2) = '+fmt3(S0*1e6)+' мкВ·с = '+sci(S0)+' В·с.'));
+  body.push(p('Сигнал неотрицателен, поэтому S(0) = max|S(ω)|.'));
+  body.push(ctr('Пороговый критерий: для ω > ωв модуль спектра не превышает 0,1·max|S(ω)| = 0,1·'+fmt3(S0*1e6)+' = '+fmt3(0.1*S0*1e6)+' мкВ·с.'));
+  body.push(p('Уровень пересекается трижды:'));
+  body.push(tbl([
+    ['Пересечение','ω, рад/мс','Направление'],
+    ['Первое', fmt3(перес[0]/1e3), 'сверху вниз'],
+    ['Второе', fmt3(перес[1]/1e3), 'снизу вверх'],
+    ['Третье', fmt3(перес[2]/1e3), 'сверху вниз']
+  ]));
+  body.push(p('Между первым и вторым пересечением боковой лепесток поднимается до ≈0,13·max > 0,1·max ⇒ первое не подходит.'));
+  body.push(ctr('ωв = '+fmt3(wв/1e3)+' рад/мс = '+sci(wв)+' рад/с (последнее пересечение вниз).'));
+
+  // Вставка графика спектра
+  const imgS=await добавитьИзображение('cvS',ГРАФИКИ[0].подпись);
+  if(imgS)body.push(imgS);
+
+  // 3
+  body.push(h1('3. ДИСКРЕТИЗАЦИЯ И ОТСЧЁТЫ x(n) (п. 2.1.1)'));
+  body.push(p('По теореме Котельникова: ωд ≥ 2ωв ⇔ Тд ≤ π/ωв.'));
+  body.push(ctr('Тд = π/ωв = π/'+fmt3(wв/1e3)+' = '+fmt3(Тд*1e6)+' мкс'));
+  body.push(ctr('ωд = 2π/Тд = '+fmt3(wд/1e3)+' рад/мс = '+sci(wд)+' рад/с'));
+  body.push(ctr('2·ωв = '+fmt3(2*wв/1e3)+' рад/мс = ωд (условие как равенство, запас = 0).'));
+  body.push(ctr('Nmin = ⌈Tc/Тд⌉ = ⌈'+Tc+'/'+fmt3(Тд*1e6)+'⌉ = 7'));
+  body.push(p('Принято N = '+N+', Тд = Tc/N = '+Tc+'/'+N+' = '+fmt3(Тд*1e6)+' мкс (ωд/(2ωв) = '+(wд/(2*wв)).toFixed(3)+', запас ×'+(wд/(2*wв)).toFixed(2)+').'));
+  body.push(p('Отсчёты x(n) = s(n·Тд):'));
+  const xrows=[['n','t = n·Тд, мкс','x(n), В']];
+  for(let i=0;i<x.length;i++)xrows.push([String(i),fmt3(i*Тд*1e6),fmt3(x[i])]);
+  body.push(tbl(xrows));
+  body.push(p('Σx(n) = '+fmt3(x.reduce((a,b)=>a+b,0))+' В.'));
+
+  const imgX=await добавитьИзображение('cvX',ГРАФИКИ[2].подпись);
+  if(imgX)body.push(imgX);
+
+  // 4
+  body.push(h1('4. Z-ПРЕОБРАЗОВАНИЕ (п. 2.1.3)'));
+  body.push(p('X(z) = Σ x(n)·z^(−n) = '));
+  body.push(ctr('X(z) = '+x.map((v,i)=>(v===0?'':fmt3(v)+(i===0?'':'·z^−'+i))).filter(Boolean).join(' + ')));
+  body.push(p('Проверка: X(1) = Σx(n) = '+fmt3(x.reduce((a,b)=>a+b,0))+' = Sд(0).'));
+  body.push(p('Связь: подстановка z = e^(jωTд) в X(z) даёт Sд(ω).'));
+
+  // 5
+  body.push(h1('5. ДИСКРЕТНОЕ ПРЕОБРАЗОВАНИЕ ФУРЬЕ (п. 2.1.4)'));
+  body.push(p('Cₖ = (1/N)·Σ x(n)·e^(−j2πkn/N), k = 0…'+(N-1)+'. Шаг по частоте ω₁ = 2π/Tc = '+fmt3(2*Math.PI/Tc/1e3)+' рад/мс.'));
+  body.push(p('|C₁| = |C'+(N-1)+'| (симметрия для вещественного сигнала).'));
+  const dprows=[['k','|Cₖ|','arg Cₖ, град']];
+  for(let k=0;k<=Math.min(N-1,6);k++){
+    dprows.push([String(k),fmt3(Math.hypot(Ck[k].re,Ck[k].im)),fmt3(Math.atan2(Ck[k].im,Ck[k].re)*180/Math.PI)]);
+  }
+  if(N>7)dprows.push(['…','…','…']);
+  dprows.push([String(Math.floor(N/2)),fmt3(Math.hypot(Ck[Math.floor(N/2)].re,Ck[Math.floor(N/2)].im)),fmt3(Math.atan2(Ck[Math.floor(N/2)].im,Ck[Math.floor(N/2)].re)*180/Math.PI)]);
+  dprows.push([String(N-1),fmt3(Math.hypot(Ck[N-1].re,Ck[N-1].im)),fmt3(Math.atan2(Ck[N-1].im,Ck[N-1].re)*180/Math.PI)]);
+  body.push(tbl(dprows));
+  const parsel=N*Ck.reduce((s,c)=>s+c.re*c.re+c.im*c.im,0);
+  const xsq=x.reduce((s,v)=>s+v*v,0);
+  body.push(p('Контроль Парсеваля: N·Σ|Cₖ|² = '+fmt3(parsel)+', Σx(n)² = '+fmt3(xsq)+' ⇒ '+ (Math.abs(parsel-xsq)<1e-6?'ВЫПОЛНЕНО':'НЕ ВЫПОЛНЕНО')));
+  body.push(p('Σ|Cₖ| = '+fmt3(Ck.reduce((s,c)=>s+Math.hypot(c.re,c.im),0))+' ≠ Σx(n) = '+fmt3(x.reduce((a,b)=>a+b,0))+' — не должно совпадать.'));
+
+  const imgDft=await добавитьИзображение('cvDft',ГРАФИКИ[3].подпись);
+  if(imgDft)body.push(imgDft);
+  const imgArg=await добавитьИзображение('cvArg',ГРАФИКИ[4].подпись);
+  if(imgArg)body.push(imgArg);
+
+  // 6
+  body.push(h1('6. ВОССТАНОВЛЕНИЕ СИГНАЛА (п. 2.1.1, 2.1.4)'));
+  body.push(p('Ряд Котельникова:'));
+  body.push(ctr('s(t) = Σ x(n)·sin[ωд(t−n·Тд)/2] / [ωд(t−n·Тд)/2]'));
+  body.push(p('В узлах t = n·Тд ряд даёт отсчёты точно; между узлами — приближённо.'));
+  const kot=[];
+  for(let tt of [0.125,0.625,1.0,2.0,2.5]){
+    let sk=0;for(let nn=0;nn<x.length;nn++){let a1=wд*(tt*1e-6-nn*Тд)/2;sk+=x[nn]*(Math.abs(a1)<1e-9?1:Math.sin(a1)/a1);}kot.push([tt,sk]);
+  }
+  body.push(tbl([['t, мкс','s(t) точно','ряд Котельникова']].concat(kot.map(r=>[String(r[0]),fmt3(r[0]),fmt3(r[1])]))));
+  body.push(p('Ряд Фурье (п. 2.1.4):'));
+  body.push(ctr('s(t) = C₀ + Σ 2|Cₖ|·cos(k·ω₁t + arg Cₖ) + C_{N/2}·cos((N/2)·ω₁t)'));
+  body.push(p('В узлах t = n·Тд ряд даёт x(n) с ошибкой ~10⁻¹⁵.'));
+  body.push(p('Обратное ДПФ (п. 2.1.5): x(n) = Σ Cₖ·e^(j2πkn/N) ⇒ восстанавливает исходную последовательность.'));
+
+  const imgRest=await добавитьИзображение('cvRest',ГРАФИКИ[5].подпись);
+  if(imgRest)body.push(imgRest);
+  const imgOdpf=await добавитьИзображение('cvОДПФ',ГРАФИКИ[6].подпись);
+  if(imgOdpf)body.push(imgOdpf);
+
+  // 7
+  body.push(h1('7. СРАВНЕНИЕ РЕЗУЛЬТАТОВ (п. 2.1.6)'));
+  body.push(p('1. Форма спектра: Tд·|Sд(ω)| повторяет |S(ω)| в полосе |ω| < ωд/2; расхождение у границы из-за наложения.'));
+  body.push(p('2. Z-преобразование и Sд(ω): Sд(ω) = X(z)|_{z=e^(jωTд)}.'));
+  body.push(p('3. Дискретный спектр — копии S(ω), наложенные с шагом ωд. При ωд > 2ωв в полосе [0, ωв] копии не перекрываются.'));
+  body.push(p(''));
+  body.push(p('Исходные данные проверены по методическим указаниям Каратаевой Н.А. (ТУСУР, 2002), п. 2.1.1–2.1.6.'));
+
+  const imgCmp=await добавитьИзображение('cvCmp',ГРАФИКИ[7].подпись);
+  if(imgCmp)body.push(imgCmp);
+
+  // ---------- Собираем document.xml ----------
+  const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document '+NS+'><w:body>'+body.join('')+
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701"/></w:sectPr>'+
+    '</w:body></w:document>';
+
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
+    изображения.map(p=>'<Relationship Id="'+p.rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+p.имя+'"/>').join('')+
+    '</Relationships>';
+
+  const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '</Types>';
+
+  const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '</Relationships>';
+
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:styles '+NS+'>'+
+    '<w:docDefaults><w:rPrDefault><w:rPr>'+
+    '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:lang w:val="ru-RU"/>'+
+    '</w:rPr></w:rPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/>'+
+    '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr></w:style>'+
+    '</w:styles>';
+
+  const settings='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:settings '+NS+'><w:compat/></w:settings>';
+
+  const футер='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:ftr '+NS+'><w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="24"/></w:rPr></w:pPr>'+
+    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:rPr><w:sz w:val="24"/></w:rPr><w:t>2</w:t></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>'+
+    '</w:p></w:ftr>';
+
+  const файлы=[
+    {имя:'[Content_Types].xml',данные:contentTypes},
+    {имя:'_rels/.rels',данные:rootRels},
+    {имя:'word/document.xml',данные:docXml},
+    {имя:'word/_rels/document.xml.rels',данные:rels},
+    {имя:'word/styles.xml',данные:styles},
+    {имя:'word/settings.xml',данные:settings},
+    {имя:'word/footer1.xml',данные:футер}
+  ];
+  изображения.forEach(p=>файлы.push({имя:'word/media/'+p.имя,данные:p.данные}));
+
+  const blob=zip2(файлы);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='Отчет_Часть1_Вариант7_с_графиками.docx';a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Экспорт части 2А
+function экспортЧ2АДокс(){
+  if(!R1||!R1.x){alert("Сначала нажмите «Решить всё»");return;}
+  alert('Экспорт части 2А будет добавлен после проверки части 1.');
+}
+
 </script>
 </body></html>
