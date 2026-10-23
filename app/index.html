@@ -919,8 +919,8 @@ async function экспортЧ2АДокс(){
   function zip2(файлы){
     const loc=[],cend=[];let off=0;
     const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
-    const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
-    const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+    const w32=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;b[o+2]=(v>>>16)&255;b[o+3]=(v>>>24)&255;};
+    const w16=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;};
     файлы.forEach(f=>{
       const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
       const lh=new Uint8Array(30);
@@ -1229,8 +1229,8 @@ async function экспортЧ2БЧДокс(){
     function zip2(файлы){
       const loc=[],cend=[];let off=0;
       const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
-      const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
-      const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+      const w32=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;b[o+2]=(v>>>16)&255;b[o+3]=(v>>>24)&255;};
+      const w16=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;};
       файлы.forEach(f=>{
         const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
         const lh=new Uint8Array(30);
@@ -1511,8 +1511,8 @@ async function экспортЧ1Докс(){
     function zip2(файлы){
       const loc=[],cend=[];let off=0;
       const toBuf=(s)=>typeof s==='string'?new TextEncoder().encode(s):s;
-      const w32=(b,o,v)=>{b.writeUInt32LE(v,o);};
-      const w16=(b,o,v)=>{b.writeUInt16LE(v,o);};
+      const w32=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;b[o+2]=(v>>>16)&255;b[o+3]=(v>>>24)&255;};
+      const w16=(b,o,v)=>{b[o]=v&255;b[o+1]=(v>>>8)&255;};
       файлы.forEach(f=>{
         const nm=toBuf(f.имя),buf=toBuf(f.данные),crc=crc32(buf);
         const lh=new Uint8Array(30);
