@@ -64,6 +64,7 @@ td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-c
 <button onclick="сохранитьJSON()">Сохранить JSON</button>
 <input type="file" id="файлJSON" accept=".json" onchange="загрузитьJSON(this)">
 <button onclick="window.print()">Печать / PDF</button>
+<button onclick="экспортОтчётаDoc(true)" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Отчёт: часть 1 (.doc)</button>
 <button onclick="экспортОтчётаDoc()" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Полный отчёт в Word (.doc)</button></div><div id="тестВывод"></div></div>
 <div class="card"><h2>1. Редактор схем цепи (тип А) — рисуем мышью, расчёт выводится из геометрии</h2>
 <div class="small" style="margin-bottom:6px">
@@ -116,6 +117,7 @@ td,th{border:1px solid var(--line);padding:3px 6px;font-size:13px}table{border-c
 </div>
 <div class="card"><h2>2. Часть 1 — дискретная обработка (п. 2.1)</h2>
 <button onclick="решитьЧ1()">Решить только ч.1</button>
+<button onclick="экспортОтчётаDoc(true)" style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;">📄 Отчёт: часть 1 (.doc)</button>
 <label>Свои x(n) через запятую <input id="inX" style="width:300px" placeholder="пусто = из сигнала"></label>
 <pre id="out1"></pre>
 <div class="gfx" id="cvS"></div>
