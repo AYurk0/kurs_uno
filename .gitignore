@@ -9,8 +9,41 @@ node_modules/
 *.png
 *.jpg
 
-# НО: графики варианта 7 нужны для сборки .docx — их исключаем из правила выше
-!app/графики/*.png
+
+
 
 # служебные файлы блокировки Word (открытый документ)
 ~$*
+# служебные папки ИИ-инструментов
+.opencode/
+.kilo/
+.claude/
+
+# PDF методичек и задачников — лежат локально, в репозиторий не кладутся
+*.pdf
+
+# временные скрипты и выгрузки разбора отчётов
+*.py
+app/doc_v*_text.txt
+app/doc_v*_part*.txt
+app/*_dump.txt
+app/*_checked.txt
+app/*_check.txt
+app/analysis*.txt
+app/*comparison*.txt
+app/variant_*.txt
+_df*.svg
+
+# производные копии приложения (собираются из index.html)
+badd.html
+app/badd.html
+app/index_nopart2.html
+
+# старый конвейер DOCX (заменён otchet_doc.js)
+app/make_docx.js
+app/check_docx.*
+app/_find.js
+app/_graphs.js
+app/графики/
+app/Курсовая_вариант_7.docx
+/calc7_out.txt
