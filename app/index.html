@@ -339,7 +339,13 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
   var найдено=false,wmax=0;
   for(var попытка=0;попытка<12&&!найдено;попытка++){
    M=0;
-   for(var i=1;i<=NG;i++){var v=cAbs(Sчисл(W*i/NG,Tc));if(v>M)M=v;}
+   // максимум ищется с ω = 0 (у большинства форм он именно там) и уточняется золотым
+   // сечением между соседними узлами сетки — иначе вместо 1,5 получалось 1,4999
+   var iM=0;for(var i=0;i<=NG;i++){var v=cAbs(Sчисл(W*i/NG,Tc));if(v>M){M=v;iM=i;}}
+   if(iM>0){var ma=W*(iM-1)/NG,mb=W*Math.min(iM+1,NG)/NG;
+    for(var it0=0;it0<60;it0++){var m1=ma+(mb-ma)*0.382,m2=ma+(mb-ma)*0.618;
+     if(cAbs(Sчисл(m1,Tc))>cAbs(Sчисл(m2,Tc)))mb=m2;else ma=m1;}
+    M=Math.max(M,cAbs(Sчисл((ma+mb)/2,Tc)));}
    var уров=0.1*M;
    if(!(M>0))break;
    wmax=W;

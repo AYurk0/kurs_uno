@@ -96,7 +96,9 @@ for(let n=1;n<=10;n++){
  let eS=0;for(let w=1e5;w<2e7;w+=7e5)eS=Math.max(eS,abs(sub(sig.S(w),sig.Sсимп(w))));
  проверка(eS/uf.M<1e-6,"эталонный спектр: формула = Симпсон ("+fx(eS/uf.M)+")");
  проверка(uf.хвостОк&&Math.abs(R1.wв-uf.wv)/uf.wv<1e-3,"ωв = "+fx(R1.wв/1e6)+" Мрад/с (эталон "+fx(uf.wv/1e6)+")");
- const Td=PI/uf.wv,Nн=Math.ceil(sig.Tc/Td-1e-9),xs=[];for(let k=0;k<Nн;k++)xs.push(sig.s(k*Td+Td*1e-9));
+ // шаг берётся из решателя (ωв проверена выше): при Tc/Tд, равном целому числу (сигнал 51),
+ // эталонная ωв, отличающаяся в 9-м знаке, иначе давала бы лишний отсчёт ровно в t = Tc
+ const Td=R1.Tд,Nн=Math.ceil(sig.Tc/Td-1e-9),xs=[];for(let k=0;k<Nн;k++)xs.push(sig.s(k*Td+Td*1e-9));
  проверка(R1.x.length===Nн&&R1.x.every((v,i)=>Math.abs(v-xs[i])<2e-3),"отсчёты x(n): "+R1.x.length+" шт. (эталон "+Nн+")");
  проверка(R1.N===R1.x.length,"ДПФ от той же последовательности: N = "+R1.N);
  const xо=ctx.ОДПФ(R1.Ck);проверка(R1.x.every((v,i)=>Math.abs(v-xо[i])<1e-9),"ОДПФ возвращает x(n)");
