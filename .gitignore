@@ -47,3 +47,9 @@ app/_graphs.js
 app/графики/
 app/Курсовая_вариант_7.docx
 /calc7_out.txt
+
+# в репозитории только README.md; заметки, журнал и отчёты Word лежат локально
+*.md
+!README.md
+*.doc
+*.docx
