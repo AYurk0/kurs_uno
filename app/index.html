@@ -194,13 +194,42 @@ function деления(a,b,n){n=n||6;var d=(b-a)/n;if(!(d>0))return[a];
 function fmt(v){if(typeof v!=="number"||!isFinite(v))return String(v);var a=Math.abs(v);
  if(a!==0&&(a>=1e5||a<1e-3))return v.toExponential(1);
  return String(+v.toPrecision(5));}
+// Оформление графиков. СТИЛЬ_ГРАФИКОВ = null — вид по умолчанию (цвета темы); любое поле
+// можно переопределить (панель «Оформление графиков» в reshatel_stil.html):
+//  цвета:[…], штрихи:[…] (пунктир каждой серии), шрифт, кегль (множитель), линия (толщина),
+//  сетка: сплошная|пунктир|нет, маркер: круг|квадрат|треугольник|ромб|нет,
+//  легенда: снизу|справа|внутри|нет, рамка, заголовок, ширина, высота (множитель),
+//  фон, отсчёты: палочки|точки|ступеньки, осьЧастоты (подпись вместо «ω, Мрад/с»).
+var СТИЛЬ_ГРАФИКОВ=null;
+// Данные каждого построенного графика по id контейнера — для выгрузки в Excel
+var ДАННЫЕ_ГРАФИКОВ={};
+function стильГрафиков(){var s=СТИЛЬ_ГРАФИКОВ||{};
+ return {цвета:s.цвета||PLOTCOL,штрихи:s.штрихи||null,шрифт:s.шрифт||"",кегль:s.кегль||1,линия:s.линия||2,
+  сетка:s.сетка||"сплошная",маркер:s.маркер||"круг",легенда:s.легенда||"снизу",рамка:s.рамка!==false,
+  заголовок:s.заголовок!==false,ширина:s.ширина||640,высота:s.высота||1,фон:s.фон||"",
+  отсчёты:s.отсчёты||"палочки",осьЧастоты:s.осьЧастоты||""};}
+// Маркер точки заданной формы
+function маркерSVG(вид,x,y,r,c){x=+x;y=+y;
+ if(вид==="нет")return "";
+ if(вид==="квадрат")return '<rect x="'+(x-r).toFixed(1)+'" y="'+(y-r).toFixed(1)+'" width="'+(2*r).toFixed(1)+'" height="'+(2*r).toFixed(1)+'" fill="'+c+'"/>';
+ if(вид==="треугольник")return '<polygon points="'+x.toFixed(1)+','+(y-r*1.2).toFixed(1)+' '+(x-r*1.1).toFixed(1)+','+(y+r*0.9).toFixed(1)+' '+(x+r*1.1).toFixed(1)+','+(y+r*0.9).toFixed(1)+'" fill="'+c+'"/>';
+ if(вид==="ромб")return '<polygon points="'+x.toFixed(1)+','+(y-r*1.3).toFixed(1)+' '+(x+r*1.3).toFixed(1)+','+y.toFixed(1)+' '+x.toFixed(1)+','+(y+r*1.3).toFixed(1)+' '+(x-r*1.3).toFixed(1)+','+y.toFixed(1)+'" fill="'+c+'"/>';
+ return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+c+'"/>';}
 function plot(host,o){var el=(typeof host==="string")?document.getElementById(host):host;if(!el)return;o=o||{};
  var ss=(o.series||[]).filter(function(s){return s&&s.x&&s.y&&s.x.length;});
  if(!ss.length){el.innerHTML='<div class="small">(нет данных для графика)</div>';return;}
+ var С=стильГрафиков(),к=С.кегль;
+ var xlabel=(o.xlabel==="ω, Мрад/с"&&С.осьЧастоты)?С.осьЧастоты:o.xlabel;
+ if(el.id)ДАННЫЕ_ГРАФИКОВ[el.id]={title:o.title||el.id,xlabel:xlabel||"",ylabel:o.ylabel||"",series:ss,marks:o.marks||[],hmarks:o.hmarks||[]};
+ function цвет(j){return С.цвета[j%С.цвета.length];}
+ function штрих(se,j){var d=С.штрихи?С.штрихи[j%С.штрихи.length]:"";if(!d&&se.dash)d="6 4";return d?' stroke-dasharray="'+d+'"':"";}
  // нижнее поле: тики оси X -> подпись оси X -> строки легенды
- var leg=ss.filter(function(se){return se.label;}),cols=leg.length>2?2:1,rows=Math.ceil(leg.length/cols);
- var legTop=33+(o.xlabel?18:0); // базовая линия первой строки легенды от низа области построения
- var W=640,H=o.h||270,m={l:64,r:16,t:34,b:legTop+(leg.length?12+15*rows:0)+4};
+ var leg=(С.легенда==="нет")?[]:ss.filter(function(se){return se.label;});
+ var внизу=С.легенда==="снизу",cols=leg.length>2?2:1,rows=внизу?Math.ceil(leg.length/cols):0;
+ var legTop=Math.round((33+(xlabel?18:0))*к); // базовая линия первой строки легенды от низа области построения
+ var W=С.ширина,H=Math.round((o.h||270)*С.высота),шагЛ=Math.round(15*к);
+ var m={l:Math.round(64*к),r:(С.легенда==="справа"&&leg.length)?Math.round(170*к):16,t:С.заголовок?Math.round(34*к):14,
+  b:legTop+(внизу&&leg.length?12+шагЛ*rows:0)+4};
  var yLeg0=H-m.b+legTop+12;
  var ax=[],ay=[];ss.forEach(function(s){for(var i=0;i<s.x.length;i++){ax.push(s.x[i]);ay.push(s.y[i]);}});
  var x0=(o.xlim&&o.xlim[0]!=null)?o.xlim[0]:Math.min.apply(null,ax),x1=(o.xlim&&o.xlim[1]!=null)?o.xlim[1]:Math.max.apply(null,ax);
@@ -211,38 +240,52 @@ function plot(host,o){var el=(typeof host==="string")?document.getElementById(ho
   else{y1+=d*0.10;y0=(y0>0)?Math.max(0,y0-d*0.10):y0-d*0.10;}}
  if(!(x1>x0)){x0-=0.5;x1+=0.5;}
  var sx=function(x){return m.l+(x-x0)/(x1-x0)*(W-m.l-m.r);},sy=function(y){return H-m.b-(y-y0)/(y1-y0)*(H-m.t-m.b);};
- var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(o.title||"график")+'">';
+ var f11=(11*к).toFixed(1),f12=(12*к).toFixed(1),f13=(13*к).toFixed(1);
+ var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(o.title||"график")+'"'+(С.шрифт?' font-family="'+esc(С.шрифт)+'"':"")+'>';
+ if(С.фон)s+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="'+С.фон+'"/>';
+ var сетка=С.сетка==="нет"?null:(С.сетка==="пунктир"?' stroke-dasharray="2 3"':"");
  деления(x0,x1,7).forEach(function(t){if(t<x0-1e-12||t>x1+1e-12)return;
-  s+='<line x1="'+sx(t).toFixed(1)+'" x2="'+sx(t).toFixed(1)+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--grid)"/>';
-  s+='<text x="'+sx(t).toFixed(1)+'" y="'+(H-m.b+15)+'" font-size="11" text-anchor="middle" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
+  if(сетка!==null)s+='<line x1="'+sx(t).toFixed(1)+'" x2="'+sx(t).toFixed(1)+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--grid)"'+сетка+'/>';
+  s+='<text x="'+sx(t).toFixed(1)+'" y="'+(H-m.b+15*к).toFixed(1)+'" font-size="'+f11+'" text-anchor="middle" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
  деления(y0,y1,5).forEach(function(t){if(t<y0-1e-12||t>y1+1e-12)return;
-  s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+sy(t).toFixed(1)+'" y2="'+sy(t).toFixed(1)+'" stroke="var(--grid)"/>';
-  s+='<text x="'+(m.l-6)+'" y="'+(sy(t)+4).toFixed(1)+'" font-size="11" text-anchor="end" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
- s+='<rect x="'+m.l+'" y="'+m.t+'" width="'+(W-m.l-m.r)+'" height="'+(H-m.t-m.b)+'" fill="none" stroke="var(--ax)"/>';
+  if(сетка!==null)s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+sy(t).toFixed(1)+'" y2="'+sy(t).toFixed(1)+'" stroke="var(--grid)"'+сетка+'/>';
+  s+='<text x="'+(m.l-6)+'" y="'+(sy(t)+4).toFixed(1)+'" font-size="'+f11+'" text-anchor="end" fill="var(--mut)">'+esc(fmt(t))+'</text>';});
+ if(С.рамка)s+='<rect x="'+m.l+'" y="'+m.t+'" width="'+(W-m.l-m.r)+'" height="'+(H-m.t-m.b)+'" fill="none" stroke="var(--ax)"/>';
+ else s+='<line x1="'+m.l+'" x2="'+m.l+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--ax)"/><line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+(H-m.b)+'" y2="'+(H-m.b)+'" stroke="var(--ax)"/>';
  if(y0<0&&y1>0)s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+sy(0).toFixed(1)+'" y2="'+sy(0).toFixed(1)+'" stroke="var(--ax)" stroke-dasharray="3 3"/>';
  (o.marks||[]).forEach(function(k){var X=sx(k.x);if(X<m.l-1||X>W-m.r+1)return;
   s+='<line x1="'+X.toFixed(1)+'" x2="'+X.toFixed(1)+'" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--c3)" stroke-dasharray="5 4"/>';
-  s+='<text x="'+(X+4).toFixed(1)+'" y="'+(m.t+13)+'" font-size="11" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
+  s+='<text x="'+(X+4).toFixed(1)+'" y="'+(m.t+13*к).toFixed(1)+'" font-size="'+f11+'" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
  (o.hmarks||[]).forEach(function(k){var Y=sy(k.y);if(Y<m.t-1||Y>H-m.b+1)return;
   s+='<line x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+Y.toFixed(1)+'" y2="'+Y.toFixed(1)+'" stroke="var(--c3)" stroke-dasharray="5 4"/>';
-  s+='<text x="'+(W-m.r-4)+'" y="'+(Y-4).toFixed(1)+'" font-size="11" text-anchor="end" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
-ss.forEach(function(se,j){var c=PLOTCOL[j%PLOTCOL.length],dash=se.dash?' stroke-dasharray="6 4"':"";
-  if(se.type==="stem"){for(var i=0;i<se.x.length;i++){var X=sx(se.x[i]).toFixed(1);
-   s+='<line x1="'+X+'" x2="'+X+'" y1="'+sy(0).toFixed(1)+'" y2="'+sy(se.y[i]).toFixed(1)+'" stroke="'+c+'" stroke-width="1.6"/>';
-   s+='<circle cx="'+X+'" cy="'+sy(se.y[i]).toFixed(1)+'" r="3.2" fill="'+c+'"/>';}}
+  s+='<text x="'+(W-m.r-4)+'" y="'+(Y-4).toFixed(1)+'" font-size="'+f11+'" text-anchor="end" fill="var(--c3)">'+esc(k.label||"")+'</text>';});
+ ss.forEach(function(se,j){var c=цвет(j),dash=штрих(se,j);
+  if(se.type==="stem"){var y0p=sy(0).toFixed(1);
+   if(С.отсчёты==="ступеньки"){var st="";for(var i=0;i<se.x.length;i++){var Xa=sx(se.x[i]),Xb=sx(i+1<se.x.length?se.x[i+1]:se.x[i]+(se.x[1]-se.x[0]||1)),Y=sy(se.y[i]);
+     st+=(i?"L":"M")+Xa.toFixed(1)+" "+Y.toFixed(1)+"L"+Xb.toFixed(1)+" "+Y.toFixed(1);}
+    s+='<path fill="none" stroke="'+c+'" stroke-width="'+(С.линия*0.8).toFixed(1)+'"'+dash+' d="'+st+'"/>';}
+   for(var i2=0;i2<se.x.length;i2++){var X=sx(se.x[i2]).toFixed(1),Yi=sy(se.y[i2]).toFixed(1);
+    if(С.отсчёты==="палочки")s+='<line x1="'+X+'" x2="'+X+'" y1="'+y0p+'" y2="'+Yi+'" stroke="'+c+'" stroke-width="'+(С.линия*0.8).toFixed(1)+'"/>';
+    if(С.отсчёты!=="ступеньки")s+=маркерSVG(С.маркер==="нет"?"круг":С.маркер,X,Yi,3.2,c);}}
   else{var dd="";for(var q=0;q<se.x.length;q++)dd+=(q?"L":"M")+sx(se.x[q]).toFixed(1)+" "+sy(se.y[q]).toFixed(1);
-   s+='<path fill="none" stroke="'+c+'" stroke-width="2"'+dash+' d="'+dd+'"/>';
+   s+='<path fill="none" stroke="'+c+'" stroke-width="'+С.линия+'"'+dash+' d="'+dd+'"/>';
    if(se.dots)for(var q2=0;q2<se.x.length;q2+=Math.max(1,Math.ceil(se.x.length/40)))
-    s+='<circle cx="'+sx(se.x[q2]).toFixed(1)+'" cy="'+sy(se.y[q2]).toFixed(1)+'" r="2" fill="'+c+'"/>';}});
- s+='<text x="'+m.l+'" y="20" font-size="13" font-weight="600" fill="var(--fg)">'+esc(o.title||"")+'</text>';
- if(o.xlabel)s+='<text x="'+((m.l+W-m.r)/2).toFixed(1)+'" y="'+(H-m.b+32)+'" font-size="12" text-anchor="middle" fill="var(--mut)">'+esc(o.xlabel)+'</text>';
- if(o.ylabel)s+='<text transform="translate(14 '+((m.t+H-m.b)/2).toFixed(1)+') rotate(-90)" font-size="12" text-anchor="middle" fill="var(--mut)">'+esc(o.ylabel)+'</text>';
- if(leg.length){var cw=(W-m.l-m.r)/cols;
-  leg.forEach(function(se,j){var jj=ss.indexOf(se),c=PLOTCOL[jj%PLOTCOL.length],
-   col=j%cols,row=Math.floor(j/cols),lx=m.l+col*cw+4,ly=yLeg0+row*15;
-   s+='<line x1="'+lx+'" x2="'+(lx+18)+'" y1="'+ly+'" y2="'+ly+'" stroke="'+c+'" stroke-width="2"'+(se.dash?' stroke-dasharray="5 3"':"")+'/>';
-   if(se.type==="stem")s+='<circle cx="'+(lx+9)+'" cy="'+ly+'" r="3" fill="'+c+'"/>';
-   s+='<text x="'+(lx+23)+'" y="'+(ly+4)+'" font-size="11" fill="var(--fg)">'+esc(se.label)+'</text>';});}
+    s+=маркерSVG(С.маркер,sx(se.x[q2]),sy(se.y[q2]),2,c);}});
+ if(С.заголовок)s+='<text x="'+m.l+'" y="'+(20*к).toFixed(1)+'" font-size="'+f13+'" font-weight="600" fill="var(--fg)">'+esc(o.title||"")+'</text>';
+ if(xlabel)s+='<text x="'+((m.l+W-m.r)/2).toFixed(1)+'" y="'+(H-m.b+32*к).toFixed(1)+'" font-size="'+f12+'" text-anchor="middle" fill="var(--mut)">'+esc(xlabel)+'</text>';
+ if(o.ylabel)s+='<text transform="translate('+(14*к).toFixed(1)+' '+((m.t+H-m.b)/2).toFixed(1)+') rotate(-90)" font-size="'+f12+'" text-anchor="middle" fill="var(--mut)">'+esc(o.ylabel)+'</text>';
+ if(leg.length){
+  // положение строк легенды: снизу — в 1–2 колонки; справа и внутри — столбиком
+  var cw=(W-m.l-m.r)/cols,позиция=function(j){
+   if(внизу)return {x:m.l+(j%cols)*cw+4,y:yLeg0+Math.floor(j/cols)*шагЛ};
+   if(С.легенда==="справа")return {x:W-m.r+10,y:m.t+12+j*шагЛ};
+   return {x:W-m.r-Math.round(190*к),y:m.t+16+j*шагЛ};};
+  if(С.легенда==="внутри")s+='<rect x="'+(W-m.r-Math.round(196*к))+'" y="'+(m.t+4)+'" width="'+Math.round(190*к)+'" height="'+(leg.length*шагЛ+8)+'" fill="var(--card)" stroke="var(--grid)"/>';
+  leg.forEach(function(se,j){var jj=ss.indexOf(se),c=цвет(jj),p=позиция(j),lx=p.x,ly=p.y;
+   if(se.type!=="stem"||С.отсчёты==="ступеньки")s+='<line x1="'+lx+'" x2="'+(lx+18)+'" y1="'+ly+'" y2="'+ly+'" stroke="'+c+'" stroke-width="'+С.линия+'"'+штрих(se,jj)+'/>';
+   if(se.type==="stem"&&С.отсчёты!=="ступеньки")s+=маркерSVG(С.маркер==="нет"?"круг":С.маркер,lx+9,ly,3,c);
+   else if(se.dots)s+=маркерSVG(С.маркер,lx+9,ly,2.5,c);
+   s+='<text x="'+(lx+23)+'" y="'+(ly+4)+'" font-size="'+f11+'" fill="var(--fg)">'+esc(se.label)+'</text>';});}
  s+='</svg>';
  el.innerHTML='<div class="bar"><button type="button">Сохранить SVG</button></div>'+s+'<div class="tip"></div>';
  var svg=el.querySelector("svg"),tip=el.querySelector(".tip");
@@ -407,7 +450,7 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
   series:[{label:"φ(ω), °",x:wx,y:фи}],marks:[{x:wв/1e6,label:"ωв"}]});
  var nx=[];for(var q2=0;q2<x.length;q2++)nx.push(q2);
  plot("cvX",{title:"Отсчёты x(nTд), Tд="+(Tд*1e6).toFixed(3)+" мкс",xlabel:"n  (t = n·Tд)",ylabel:"x(nTд), В",h:250,
-  series:[{label:"x(nTд)",x:nx,y:x,type:"stem"}],ylim:[0,null]});
+  series:[{label:"x(nTд)",x:nx,y:x,type:"stem"}]});
  var мCk=Ck.map(cAbs),ix=[];for(var q3=0;q3<N;q3++)ix.push(q3);
  plot("cvDft",{title:"Коэффициенты ДПФ |Ck|, N="+N,xlabel:"k  (номер гармоники)",ylabel:"|Ck|",h:250,
   series:[{label:"|Ck|",x:ix,y:мCk,type:"stem"}],ylim:[0,null]});
@@ -429,7 +472,7 @@ function решитьЧ1(){читатьВвод();var q=парамСиг(),Tc=q.
  var xОдпфN=[];for(var nn2=0;nn2<N;nn2++)xОдпфN.push(nn2);
  var мОдпф=xВосC.map(function(c){return c.re;});
  plot("cvОДПФ",{title:"Обратное ДПФ (п.2.1.5): восстановленные отсчёты x(n), N="+N,xlabel:"n",ylabel:"x(n), В",h:250,
-  series:[{label:"x(n) — ОДПФ из Ck",x:xОдпфN,y:мОдпф,type:"stem"}],ylim:[0,null]});
+  series:[{label:"x(n) — ОДПФ из Ck",x:xОдпфN,y:мОдпф,type:"stem"}]});
  // Сравнение спектров (п.2.1.6): |Sд(ω)| vs периодизация |S(ω)| с периодом ωд — наложение
  var wC=[],yC1=[],yC2=[],Nc2=240;
  for(var ic=0;ic<=Nc2;ic++){var wc=ic/Nc2*2*wд;wC.push(wc/1e6);
@@ -950,7 +993,7 @@ function решитьЧ2БЧ(){читатьВвод();if(!R1.x)решитьЧ1()
 // === Этап 7. JSON; Этап 1-тесты ===
 // Считается только та часть 2, которая положена букве варианта: у типа А нет α, β (N3N4 —
 // номер цепи), у Б/Ч нет цепи. Раздел другой буквы очищается, чтобы не вводить в заблуждение.
-function решитьВсё(){решитьЧ1();
+function решитьВсё(){ДАННЫЕ_ГРАФИКОВ={};решитьЧ1();
  if(P.тип==="А"){решитьЧ2А();очиститьРаздел(["out2Б","схемаБЧ","cvBC","cvBCф","cvBCg","cvBCy"],"Раздел 2Б/Ч не входит в вариант с буквой А.");R1.ч2БЧ=null;}
  else{решитьЧ2БЧ();очиститьРаздел(["out2A","схемаSVG","cvA","cvФ2","cvY","cvG"],"Раздел 2А не входит в вариант с буквой "+P.тип+".");R1.ч2А=null;}
  document.getElementById("outВывод").textContent+="\nЧастичный режим: впишите свои x(n) или a_k,b_k в поля — расчёт пойдёт с этого места; пустые шаги = «недостаточно данных». Отчёт — порядок разд.5.";}

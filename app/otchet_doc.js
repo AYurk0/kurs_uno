@@ -86,6 +86,8 @@ function собратьHTML(рис,толькоЧ1){
  function г2(ном,t){h.push('<h2>'+ном+" "+t+'</h2>');}
  function ф(t){фНом++;h.push('<table class="фм" width="100%"><tr><td width="88%" class="фц">'+t+'</td><td width="12%" class="фн">('+глава+'.'+фНом+')</td></tr></table>');return глава+"."+фНом;}
  function таблица(подп,строки,шапка){табНом++;var ном=глава+"."+табНом;
+  // горизонтальная таблица шире 12 столбцов не помещается на страницу — переворачиваем её
+  if(строки[0].length>12)строки=строки[0].map(function(_,j){return строки.map(function(r){return r[j];});});
   h.push('<p class="тп">Таблица '+ном+' – '+подп+'</p><table class="т">');
   строки.forEach(function(r,i){h.push('<tr>'+r.map(function(c){return (i===0&&шапка!==false?'<th>':'<td>')+c+(i===0&&шапка!==false?'</th>':'</td>');}).join("")+'</tr>');});
   h.push('</table>');return ном;}
